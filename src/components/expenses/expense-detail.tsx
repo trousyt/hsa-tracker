@@ -1,6 +1,9 @@
-import { useQuery } from "convex/react"
+import { useState, useMemo, useEffect, useRef } from "react"
+import { useQuery, useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import type { Id } from "../../../convex/_generated/dataModel"
+import { Sparkles, Pencil } from "lucide-react"
+import { toast } from "sonner"
 
 import {
   Sheet,
@@ -10,6 +13,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -19,6 +23,7 @@ import { DocumentGallery } from "@/components/documents/document-gallery"
 import { ReimbursementForm } from "@/components/reimbursements/reimbursement-form"
 import { ReimbursementHistory } from "@/components/reimbursements/reimbursement-history"
 import { QuickReimburseButton } from "@/components/reimbursements/quick-reimburse-button"
+import { ExpenseDialog } from "./expense-dialog"
 
 interface ExpenseDetailProps {
   expenseId: Id<"expenses"> | null
@@ -31,10 +36,51 @@ export function ExpenseDetail({
   open,
   onOpenChange,
 }: ExpenseDetailProps) {
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+
+  const acknowledgeOcr = useMutation(api.expenses.acknowledgeOcr)
+
   const expense = useQuery(
     api.expenses.get,
     expenseId ? { id: expenseId } : "skip"
   )
+
+  // Query documents to check for OCR data
+  const documents = useQuery(
+    api.documents.getMany,
+    expense?.documentIds?.length ? { ids: expense.documentIds } : "skip"
+  )
+
+  // Find the best OCR data from documents (first completed one with data)
+  const ocrData = useMemo(() => {
+    if (!documents) return null
+
+    for (const doc of documents) {
+      if (doc?.ocrStatus === "completed" && doc.ocrExtractedData) {
+        const { amount, date, provider } = doc.ocrExtractedData
+        // Only return if we have at least some useful data
+        if (amount || date || provider) {
+          return doc.ocrExtractedData
+        }
+      }
+    }
+    return null
+  }, [documents])
+
+  // Show toast for OCR failures (only once per document)
+  const shownOcrErrors = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    if (!documents) return
+
+    for (const doc of documents) {
+      if (doc?.ocrStatus === "failed" && !shownOcrErrors.current.has(doc._id)) {
+        shownOcrErrors.current.add(doc._id)
+        toast.error("Couldn't extract data automatically. Please enter manually.", {
+          description: doc.ocrError || undefined,
+        })
+      }
+    }
+  }, [documents])
 
   // Show skeleton while loading
   if (expenseId && expense === undefined) {
@@ -86,8 +132,16 @@ export function ExpenseDetail({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-lg">
-        <SheetHeader>
+        <SheetHeader className="flex flex-row items-center justify-between pr-10">
           <SheetTitle>Expense Details</SheetTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEditDialogOpen(true)}
+          >
+            <Pencil className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
         </SheetHeader>
 
         <SheetBody className="space-y-4">
@@ -157,6 +211,35 @@ export function ExpenseDetail({
                 <p className="text-sm">{expense.comment}</p>
               </div>
             )}
+
+            {/* OCR Data Available Banner */}
+            {ocrData && !expense.ocrAcknowledged && (
+              <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="text-sm">OCR data available from receipt</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={async () => {
+                      await acknowledgeOcr({ id: expense._id })
+                      toast.success("OCR data disregarded")
+                    }}
+                  >
+                    Disregard
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEditDialogOpen(true)}
+                  >
+                    Apply Data
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           <Separator />
@@ -212,6 +295,14 @@ export function ExpenseDetail({
           </Tabs>
         </SheetBody>
       </SheetContent>
+
+      {/* Edit Dialog with OCR Data */}
+      <ExpenseDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        expense={expense}
+        ocrData={ocrData ?? undefined}
+      />
     </Sheet>
   )
 }

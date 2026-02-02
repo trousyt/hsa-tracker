@@ -78,6 +78,7 @@ export function ExpenseForm({
                     mode="single"
                     selected={field.value}
                     onSelect={field.onChange}
+                    defaultMonth={field.value}
                     disabled={(date) => date > new Date()}
                     initialFocus
                   />

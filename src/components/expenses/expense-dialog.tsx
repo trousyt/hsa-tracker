@@ -1,8 +1,10 @@
-import { useState } from "react"
-import { useMutation } from "convex/react"
+import { useState, useCallback, useEffect, useRef } from "react"
+import { useMutation, useQuery } from "convex/react"
+import { useDropzone } from "react-dropzone"
 import { api } from "../../../convex/_generated/api"
 import type { Id } from "../../../convex/_generated/dataModel"
 import { toast } from "sonner"
+import { Sparkles, Upload, FileText, Image, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 
 import {
   Dialog,
@@ -10,9 +12,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Progress } from "@/components/ui/progress"
 import { ExpenseForm } from "./expense-form"
 import { dollarsToCents, centsToDollars } from "@/lib/currency"
 import type { ExpenseFormData } from "@/lib/validations/expense"
+import { cn } from "@/lib/utils"
+import {
+  compressImage,
+  isValidFileType,
+  isValidFileSize,
+  formatFileSize,
+} from "@/lib/compression"
+
+interface OcrExtractedData {
+  amount?: { valueCents: number; confidence: number }
+  date?: { value: string; confidence: number }
+  provider?: { value: string; confidence: number }
+}
 
 interface ExpenseDialogProps {
   open: boolean
@@ -24,18 +40,162 @@ interface ExpenseDialogProps {
     amountCents: number
     comment?: string
   }
+  ocrData?: OcrExtractedData
 }
+
+type UploadStatus = "idle" | "compressing" | "uploading" | "saving" | "done" | "error"
+type OcrStatus = "idle" | "pending" | "processing" | "completed" | "failed"
 
 export function ExpenseDialog({
   open,
   onOpenChange,
   expense,
+  ocrData,
 }: ExpenseDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [uploadedDocumentId, setUploadedDocumentId] = useState<Id<"documents"> | null>(null)
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus>("idle")
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadedFilename, setUploadedFilename] = useState<string | null>(null)
+  const [formKey, setFormKey] = useState(0)
+  const [localOcrData, setLocalOcrData] = useState<OcrExtractedData | null>(null)
+
   const createExpense = useMutation(api.expenses.create)
   const updateExpense = useMutation(api.expenses.update)
+  const acknowledgeOcr = useMutation(api.expenses.acknowledgeOcr)
+  const generateUploadUrl = useMutation(api.documents.generateUploadUrl)
+  const saveDocument = useMutation(api.documents.save)
+  const addToExpense = useMutation(api.documents.addToExpense)
+  const removeDocument = useMutation(api.documents.remove)
+
+  // Track successful submission to avoid cleaning up documents that were attached
+  const submittedSuccessfully = useRef(false)
+
+  // Watch uploaded document for OCR completion
+  const uploadedDocument = useQuery(
+    api.documents.get,
+    uploadedDocumentId ? { id: uploadedDocumentId } : "skip"
+  )
 
   const isEditing = !!expense
+
+  // Cleanup orphaned document when dialog closes without successful submission
+  const cleanupOrphanedDocument = useCallback(async () => {
+    if (!isEditing && uploadedDocumentId && !submittedSuccessfully.current) {
+      try {
+        await removeDocument({ id: uploadedDocumentId })
+      } catch (error) {
+        console.warn("Failed to cleanup orphaned document:", error)
+      }
+    }
+  }, [isEditing, uploadedDocumentId, removeDocument])
+
+  // Reset state when dialog opens/closes
+  useEffect(() => {
+    if (open) {
+      submittedSuccessfully.current = false
+    } else {
+      cleanupOrphanedDocument()
+      setUploadedDocumentId(null)
+      setUploadStatus("idle")
+      setUploadProgress(0)
+      setUploadError(null)
+      setUploadedFilename(null)
+      setLocalOcrData(null)
+      setFormKey((k) => k + 1)
+    }
+  }, [open, cleanupOrphanedDocument])
+
+  // Watch for OCR completion and update form
+  useEffect(() => {
+    if (uploadedDocument?.ocrStatus === "completed" && uploadedDocument.ocrExtractedData) {
+      setLocalOcrData(uploadedDocument.ocrExtractedData)
+      setFormKey((k) => k + 1) // Force form re-render with new defaults
+      toast.success("Receipt data extracted!")
+    } else if (uploadedDocument?.ocrStatus === "failed") {
+      toast.error("Couldn't extract data from receipt", {
+        description: uploadedDocument.ocrError || "Please enter details manually",
+      })
+    }
+  }, [uploadedDocument?.ocrStatus, uploadedDocument?.ocrExtractedData, uploadedDocument?.ocrError])
+
+  const ocrStatusFromDoc: OcrStatus = uploadedDocument?.ocrStatus ?? "idle"
+
+  const uploadFile = async (file: File) => {
+    try {
+      // Validate file
+      if (!isValidFileType(file)) {
+        throw new Error("Invalid file type. Please upload an image or PDF.")
+      }
+      if (!isValidFileSize(file)) {
+        throw new Error("File too large. Maximum size is 10MB.")
+      }
+
+      setUploadedFilename(file.name)
+      setUploadError(null)
+
+      // Compress image
+      setUploadStatus("compressing")
+      setUploadProgress(10)
+      const compressedFile = await compressImage(file)
+
+      // Get upload URL
+      setUploadStatus("uploading")
+      setUploadProgress(30)
+      const uploadUrl = await generateUploadUrl()
+
+      // Upload file
+      const response = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": compressedFile.type },
+        body: compressedFile,
+      })
+
+      if (!response.ok) {
+        throw new Error("Upload failed")
+      }
+
+      const { storageId } = await response.json()
+      setUploadProgress(70)
+
+      // Save document record (triggers OCR)
+      setUploadStatus("saving")
+      setUploadProgress(90)
+      const documentId = await saveDocument({
+        storageId,
+        originalFilename: file.name,
+        mimeType: compressedFile.type,
+        sizeBytes: compressedFile.size,
+      })
+
+      setUploadedDocumentId(documentId)
+      setUploadStatus("done")
+      setUploadProgress(100)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Upload failed"
+      setUploadStatus("error")
+      setUploadError(message)
+      toast.error(message)
+    }
+  }
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0) {
+      uploadFile(acceptedFiles[0])
+    }
+  }, [])
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "image/*": [".jpeg", ".jpg", ".png", ".webp", ".heic"],
+      "application/pdf": [".pdf"],
+    },
+    maxSize: 10 * 1024 * 1024,
+    multiple: false,
+    disabled: uploadStatus !== "idle" && uploadStatus !== "error",
+  })
 
   const handleSubmit = async (data: ExpenseFormData) => {
     setIsSubmitting(true)
@@ -48,14 +208,23 @@ export function ExpenseDialog({
           amountCents: dollarsToCents(data.amount),
           comment: data.comment || undefined,
         })
+        // Mark OCR as acknowledged when applying data via "Apply Data" button
+        if (ocrData) {
+          await acknowledgeOcr({ id: expense._id })
+        }
         toast.success("Expense updated successfully")
       } else {
-        await createExpense({
+        const expenseId = await createExpense({
           datePaid: data.datePaid.toISOString().split("T")[0],
           provider: data.provider,
           amountCents: dollarsToCents(data.amount),
           comment: data.comment || undefined,
         })
+        // Attach uploaded document to the new expense
+        if (uploadedDocumentId) {
+          await addToExpense({ expenseId, documentId: uploadedDocumentId })
+        }
+        submittedSuccessfully.current = true
         toast.success("Expense created successfully")
       }
       onOpenChange(false)
@@ -67,14 +236,29 @@ export function ExpenseDialog({
     }
   }
 
+  // Determine which OCR data to use: local (from upload) or prop (from "Apply Data")
+  const effectiveOcrData = localOcrData ?? ocrData
+
+  // Build default values: OCR data overrides expense data when both present
   const defaultValues = expense
     ? {
-        datePaid: new Date(expense.datePaid),
-        provider: expense.provider,
-        amount: centsToDollars(expense.amountCents),
+        datePaid: effectiveOcrData?.date?.value
+          ? new Date(effectiveOcrData.date.value)
+          : new Date(expense.datePaid),
+        provider: effectiveOcrData?.provider?.value ?? expense.provider,
+        amount: effectiveOcrData?.amount?.valueCents
+          ? centsToDollars(effectiveOcrData.amount.valueCents)
+          : centsToDollars(expense.amountCents),
         comment: expense.comment,
       }
-    : undefined
+    : effectiveOcrData
+      ? {
+          datePaid: effectiveOcrData.date?.value ? new Date(effectiveOcrData.date.value) : new Date(),
+          provider: effectiveOcrData.provider?.value ?? "",
+          amount: effectiveOcrData.amount?.valueCents ? centsToDollars(effectiveOcrData.amount.valueCents) : undefined,
+          comment: "",
+        }
+      : undefined
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -84,7 +268,100 @@ export function ExpenseDialog({
             {isEditing ? "Edit Expense" : "Add Expense"}
           </DialogTitle>
         </DialogHeader>
+
+        {/* OCR Banner - when editing with OCR data from "Apply Data" */}
+        {ocrData && (
+          <div className="flex items-center gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg mb-2">
+            <Sparkles className="h-4 w-4 text-primary flex-shrink-0" />
+            <p className="text-sm">
+              Values pre-filled from receipt scan. Review and edit as needed.
+            </p>
+          </div>
+        )}
+
+        {/* File Upload - only for new expenses */}
+        {!isEditing && (
+          <div className="mb-4">
+            {uploadStatus === "idle" || uploadStatus === "error" ? (
+              <div
+                {...getRootProps()}
+                className={cn(
+                  "border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors",
+                  isDragActive
+                    ? "border-primary bg-primary/5"
+                    : "border-muted-foreground/25 hover:border-primary/50",
+                  uploadStatus === "error" && "border-destructive/50"
+                )}
+              >
+                <input {...getInputProps()} />
+                <Upload className="mx-auto h-6 w-6 text-muted-foreground mb-1" />
+                {isDragActive ? (
+                  <p className="text-sm text-primary">Drop receipt here...</p>
+                ) : (
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Drop receipt here, or click to select
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      We'll extract the details automatically
+                    </p>
+                  </div>
+                )}
+                {uploadStatus === "error" && uploadError && (
+                  <p className="text-xs text-destructive mt-2">{uploadError}</p>
+                )}
+              </div>
+            ) : (
+              <div className="border rounded-lg p-3 bg-muted/30">
+                <div className="flex items-center gap-3">
+                  {uploadedFilename?.match(/\.(jpe?g|png|webp|heic)$/i) ? (
+                    <Image className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                  ) : (
+                    <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{uploadedFilename}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      {uploadStatus === "compressing" && "Compressing..."}
+                      {uploadStatus === "uploading" && "Uploading..."}
+                      {uploadStatus === "saving" && "Saving..."}
+                      {uploadStatus === "done" && ocrStatusFromDoc === "pending" && (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Scanning receipt...
+                        </>
+                      )}
+                      {uploadStatus === "done" && ocrStatusFromDoc === "processing" && (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Extracting data...
+                        </>
+                      )}
+                      {uploadStatus === "done" && ocrStatusFromDoc === "completed" && (
+                        <>
+                          <CheckCircle2 className="h-3 w-3 text-green-600" />
+                          <span className="text-green-600">Data extracted</span>
+                        </>
+                      )}
+                      {uploadStatus === "done" && ocrStatusFromDoc === "failed" && (
+                        <>
+                          <AlertCircle className="h-3 w-3 text-amber-600" />
+                          <span className="text-amber-600">Couldn't extract data</span>
+                        </>
+                      )}
+                    </div>
+                    {uploadStatus !== "done" && (
+                      <Progress value={uploadProgress} className="h-1 mt-1" />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <ExpenseForm
+          key={formKey}
           defaultValues={defaultValues}
           onSubmit={handleSubmit}
           onCancel={() => onOpenChange(false)}

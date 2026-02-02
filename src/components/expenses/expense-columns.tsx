@@ -1,5 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table"
-import { MoreHorizontal, Pencil, Trash2, Eye, FileText } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, Eye, FileText, Sparkles } from "lucide-react"
 import type { Doc } from "../../../convex/_generated/dataModel"
 
 import { Badge } from "@/components/ui/badge"
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { formatCurrency } from "@/lib/currency"
 
-type Expense = Doc<"expenses">
+type Expense = Doc<"expenses"> & { hasUnacknowledgedOcr?: boolean }
 
 interface ColumnActionsProps {
   onView: (expense: Expense) => void
@@ -48,6 +48,11 @@ export function getExpenseColumns({
         return (
           <div className="flex items-center gap-2">
             <span>{row.getValue("provider")}</span>
+            {expense.hasUnacknowledgedOcr && (
+              <span title="OCR data available - click to review">
+                <Sparkles className="h-4 w-4 text-primary" />
+              </span>
+            )}
             {hasDocuments && (
               <span title="Has documents">
                 <FileText className="h-4 w-4 text-muted-foreground" />

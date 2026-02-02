@@ -42,7 +42,7 @@ type StatusFilter = "all" | "unreimbursed" | "partial" | "reimbursed"
 export function ExpenseTable() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const expenses = useQuery(
-    api.expenses.list,
+    api.expenses.listWithOcrStatus,
     statusFilter === "all" ? {} : { status: statusFilter }
   )
   const [sorting, setSorting] = useState<SortingState>([])

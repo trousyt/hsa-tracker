@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react"
 import { Toaster } from "@/components/ui/sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ExpenseTable } from "@/components/expenses/expense-table"
@@ -5,13 +6,47 @@ import { Optimizer } from "@/components/optimizer/optimizer"
 import { Dashboard } from "@/components/dashboard/dashboard"
 import { LayoutDashboard, Receipt, Calculator } from "lucide-react"
 
+const VALID_TABS = ["dashboard", "expenses", "optimizer"] as const
+type TabValue = (typeof VALID_TABS)[number]
+const DEFAULT_TAB: TabValue = "dashboard"
+
+function getTabFromUrl(): TabValue {
+  const params = new URLSearchParams(window.location.search)
+  const tab = params.get("tab")
+  if (tab && VALID_TABS.includes(tab as TabValue)) {
+    return tab as TabValue
+  }
+  return DEFAULT_TAB
+}
+
 function App() {
+  const [activeTab, setActiveTab] = useState<TabValue>(getTabFromUrl)
+
+  const handleTabChange = (value: string) => {
+    const tab = value as TabValue
+    setActiveTab(tab)
+
+    const url = new URL(window.location.href)
+    if (tab === DEFAULT_TAB) {
+      url.searchParams.delete("tab")
+    } else {
+      url.searchParams.set("tab", tab)
+    }
+    window.history.replaceState({}, "", url.toString())
+  }
+
+  useEffect(() => {
+    const handlePopState = () => setActiveTab(getTabFromUrl())
+    window.addEventListener("popstate", handlePopState)
+    return () => window.removeEventListener("popstate", handlePopState)
+  }, [])
+
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-6xl p-8">
         <h1 className="text-3xl font-bold mb-8">HSA Expense Tracker</h1>
 
-        <Tabs defaultValue="dashboard" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList>
             <TabsTrigger value="dashboard" className="gap-2">
               <LayoutDashboard className="h-4 w-4" />

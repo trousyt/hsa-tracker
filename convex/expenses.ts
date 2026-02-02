@@ -101,6 +101,57 @@ export const remove = mutation({
   },
 })
 
+// Mark OCR as acknowledged (applied or disregarded)
+export const acknowledgeOcr = mutation({
+  args: { id: v.id("expenses") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { ocrAcknowledged: true })
+  },
+})
+
+// List expenses with OCR status indicator
+export const listWithOcrStatus = query({
+  args: {
+    status: v.optional(
+      v.union(
+        v.literal("unreimbursed"),
+        v.literal("partial"),
+        v.literal("reimbursed")
+      )
+    ),
+  },
+  handler: async (ctx, args) => {
+    const expenses = args.status
+      ? await ctx.db
+          .query("expenses")
+          .withIndex("by_status_and_date", (q) => q.eq("status", args.status!))
+          .order("desc")
+          .collect()
+      : await ctx.db.query("expenses").order("desc").collect()
+
+    return Promise.all(
+      expenses.map(async (expense) => {
+        // Skip if already acknowledged or no documents
+        if (expense.ocrAcknowledged || expense.documentIds.length === 0) {
+          return { ...expense, hasUnacknowledgedOcr: false }
+        }
+
+        // Check each document for unacknowledged OCR data
+        for (const docId of expense.documentIds) {
+          const doc = await ctx.db.get(docId)
+          if (doc?.ocrStatus === "completed" && doc.ocrExtractedData) {
+            const { amount, date, provider } = doc.ocrExtractedData
+            if (amount || date || provider) {
+              return { ...expense, hasUnacknowledgedOcr: true }
+            }
+          }
+        }
+        return { ...expense, hasUnacknowledgedOcr: false }
+      })
+    )
+  },
+})
+
 // Get summary statistics
 export const getSummary = query({
   args: {},

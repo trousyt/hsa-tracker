@@ -14,6 +14,7 @@ export default defineSchema({
       v.literal("partial"),
       v.literal("reimbursed")
     ),
+    ocrAcknowledged: v.optional(v.boolean()), // True if user has applied or disregarded OCR data
   })
     .index("by_status", ["status"])
     .index("by_date", ["datePaid"])
