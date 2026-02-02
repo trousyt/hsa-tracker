@@ -133,9 +133,16 @@ export const extractExpenseData = action({
       // Fetch file content and convert to base64
       const fileResponse: Response = await fetch(fileUrl)
       const fileBuffer: ArrayBuffer = await fileResponse.arrayBuffer()
-      const base64Content: string = btoa(
-        String.fromCharCode(...new Uint8Array(fileBuffer))
-      )
+
+      // Convert to base64 in chunks to avoid stack overflow with large files
+      const bytes = new Uint8Array(fileBuffer)
+      const chunkSize = 8192
+      let binaryString = ""
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize)
+        binaryString += String.fromCharCode(...chunk)
+      }
+      const base64Content: string = btoa(binaryString)
 
       // 3. Call Cloud Run OCR proxy
       const cloudRunUrl = process.env.CLOUD_RUN_OCR_URL

@@ -23,8 +23,7 @@ export function DocumentViewer({ document, onClose }: DocumentViewerProps) {
         <DialogTitle className="sr-only">{document.filename}</DialogTitle>
 
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="font-medium truncate max-w-[60%]">{document.filename}</h3>
+        <div className="flex items-center gap-4 p-4 border-b">
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -45,6 +44,7 @@ export function DocumentViewer({ document, onClose }: DocumentViewerProps) {
               </a>
             </Button>
           </div>
+          <h3 className="font-medium truncate flex-1">{document.filename}</h3>
         </div>
 
         {/* Content */}
