@@ -6,10 +6,12 @@ A web application for tracking qualified HSA (Health Savings Account) medical ex
 
 - **Expense Management**: Create, edit, and delete medical expenses with date, provider, amount, and notes
 - **Document Storage**: Upload receipts and statements (JPEG, PNG, PDF) with automatic compression
+- **OCR Receipt Parsing**: Automatic extraction of date, amount, and provider from uploaded receipts using Google Cloud Document AI
 - **Reimbursement Tracking**: Track full and partial reimbursements with complete history
 - **Reimbursement Optimizer**: Find the fewest expenses that sum to a target dollar amount (uses FIFO prioritization)
 - **Dashboard**: View summary statistics and expense breakdowns
 - **CSV Export**: Export all expenses for record-keeping
+- **URL-based Navigation**: Tab state syncs to URL for bookmarking and sharing
 - **Keyboard Shortcuts**: Press `Ctrl+N` (or `Cmd+N` on Mac) to quickly add new expenses
 
 ## Tech Stack
@@ -110,7 +112,6 @@ The reimbursement optimizer uses a Dynamic Programming approach (subset sum):
 
 ## Future Enhancements
 
-- [ ] OCR integration (Google Cloud Document AI) for automatic receipt parsing
 - [ ] Multi-user authentication
 - [ ] Expense categories (dental, vision, medical, etc.)
 - [ ] Tax year grouping
