@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { Undo2, Calendar, FileText } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,8 +32,21 @@ export function ReimbursementHistory({ expenseId }: ReimbursementHistoryProps) {
 
   if (reimbursements === undefined) {
     return (
-      <div className="text-sm text-muted-foreground text-center py-4">
-        Loading history...
+      <div className="space-y-3">
+        {[1, 2].map((i) => (
+          <div
+            key={i}
+            className="flex items-start justify-between p-3 border rounded-lg bg-muted/30"
+          >
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-20" />
+              <div className="flex items-center gap-4">
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+            <Skeleton className="h-8 w-8" />
+          </div>
+        ))}
       </div>
     )
   }

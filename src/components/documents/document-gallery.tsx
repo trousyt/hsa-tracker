@@ -6,6 +6,7 @@ import { FileText, Trash2, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,7 +42,24 @@ export function DocumentGallery({
     useState<Id<"documents"> | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  if (!documents || documents.length === 0) {
+  // Loading state
+  if (documents === undefined) {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="border rounded-lg overflow-hidden">
+            <Skeleton className="aspect-[4/3]" />
+            <div className="p-2 border-t space-y-1">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-3 w-12" />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (documents.length === 0) {
     return (
       <div className="text-sm text-muted-foreground text-center py-4">
         No documents attached

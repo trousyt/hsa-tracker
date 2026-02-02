@@ -5,6 +5,7 @@ import type { Doc } from "../../../convex/_generated/dataModel"
 import { Calculator, Info } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Alert,
   AlertDescription,
@@ -50,8 +51,30 @@ export function Optimizer() {
 
   if (summary === undefined) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-muted-foreground">Loading...</div>
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-6 w-6" />
+          <Skeleton className="h-7 w-56" />
+        </div>
+        <Skeleton className="h-20 w-full rounded-lg" />
+        <div className="grid md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-10 w-full" />
+            </CardContent>
+          </Card>
+          <Card className="flex items-center justify-center">
+            <CardContent className="text-center py-12">
+              <Skeleton className="h-12 w-12 mx-auto mb-4" />
+              <Skeleton className="h-4 w-48 mx-auto" />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }

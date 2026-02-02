@@ -6,10 +6,12 @@ import {
   Sheet,
   SheetContent,
   SheetHeader,
+  SheetBody,
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatCurrency } from "@/lib/currency"
 import { FileUploader } from "@/components/documents/file-uploader"
@@ -34,18 +36,61 @@ export function ExpenseDetail({
     expenseId ? { id: expenseId } : "skip"
   )
 
+  // Show skeleton while loading
+  if (expenseId && expense === undefined) {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent className="sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>Expense Details</SheetTitle>
+          </SheetHeader>
+          <SheetBody className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-5 w-32" />
+                </div>
+                <Skeleton className="h-6 w-20 rounded-full" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-5 w-28" />
+                </div>
+                <div className="space-y-1">
+                  <Skeleton className="h-4 w-14" />
+                  <Skeleton className="h-6 w-20" />
+                </div>
+              </div>
+            </div>
+            <Separator />
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <div className="grid grid-cols-3 gap-2">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="aspect-square rounded-md" />
+                ))}
+              </div>
+            </div>
+          </SheetBody>
+        </SheetContent>
+      </Sheet>
+    )
+  }
+
   if (!expense) return null
 
   const remaining = expense.amountCents - expense.totalReimbursedCents
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-lg overflow-y-auto">
+      <SheetContent className="sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>Expense Details</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-6 space-y-4">
+        <SheetBody className="space-y-4">
           {/* Expense Summary */}
           <div className="space-y-3">
             <div className="flex justify-between items-start">
@@ -165,7 +210,7 @@ export function ExpenseDetail({
               </div>
             </TabsContent>
           </Tabs>
-        </div>
+        </SheetBody>
       </SheetContent>
     </Sheet>
   )

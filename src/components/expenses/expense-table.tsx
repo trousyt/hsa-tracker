@@ -29,6 +29,7 @@ import {
 import { Plus, Download } from "lucide-react"
 import { toast } from "sonner"
 
+import { Skeleton } from "@/components/ui/skeleton"
 import { getExpenseColumns } from "./expense-columns"
 import { exportExpensesToCSV } from "@/lib/export"
 import { ExpenseDialog } from "./expense-dialog"
@@ -97,8 +98,35 @@ export function ExpenseTable() {
 
   if (expenses === undefined) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-muted-foreground">Loading expenses...</div>
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-7 w-24" />
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-9 w-[150px]" />
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-32" />
+          </div>
+        </div>
+        <div className="rounded-md border">
+          <div className="border-b">
+            <div className="flex h-10 items-center px-4 gap-4">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          </div>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex h-14 items-center border-b px-4 gap-4 last:border-b-0">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
