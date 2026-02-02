@@ -502,17 +502,17 @@ convex/
 - Error handling throughout
 
 **Tasks:**
-- [ ] Create `Dashboard` component with summary cards
-- [ ] Add total expenses, unreimbursed, reimbursed amounts
-- [ ] Add expense count by status
-- [ ] Implement CSV export functionality
-- [ ] Add keyboard shortcuts (Cmd+N for new expense)
-- [ ] Ensure mobile-responsive layouts
-- [ ] Add error boundaries
-- [ ] Add loading skeletons
+- [x] Create `Dashboard` component with summary cards
+- [x] Add total expenses, unreimbursed, reimbursed amounts
+- [x] Add expense count by status
+- [x] Implement CSV export functionality
+- [x] Add keyboard shortcuts (Cmd+N for new expense)
+- [x] Ensure mobile-responsive layouts
+- [x] Add error boundaries
+- [x] Add loading skeletons
 - [ ] Update DevContainer firewall for Convex domains
-- [ ] Write README with setup instructions
-- [ ] Add CLAUDE.md with project conventions
+- [x] Write README with setup instructions
+- [x] Add CLAUDE.md with project conventions
 
 **Dashboard Cards:**
 - Total Expenses (all time)

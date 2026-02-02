@@ -1,73 +1,122 @@
-# React + TypeScript + Vite
+# HSA Expense Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A web application for tracking qualified HSA (Health Savings Account) medical expenses. Store receipts, track reimbursements, and optimize your HSA distributions.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Expense Management**: Create, edit, and delete medical expenses with date, provider, amount, and notes
+- **Document Storage**: Upload receipts and statements (JPEG, PNG, PDF) with automatic compression
+- **Reimbursement Tracking**: Track full and partial reimbursements with complete history
+- **Reimbursement Optimizer**: Find the fewest expenses that sum to a target dollar amount (uses FIFO prioritization)
+- **Dashboard**: View summary statistics and expense breakdowns
+- **CSV Export**: Export all expenses for record-keeping
+- **Keyboard Shortcuts**: Press `Ctrl+N` (or `Cmd+N` on Mac) to quickly add new expenses
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend**: React 18 + TypeScript + Vite
+- **UI Components**: shadcn/ui + Tailwind CSS v4
+- **Backend**: Convex (real-time database + file storage)
+- **Forms**: React Hook Form + Zod validation
+- **Tables**: TanStack Table
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Prerequisites
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Node.js 18+
+- npm or pnpm
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Installation
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd HSATracker-Deux
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Set up Convex:
+   ```bash
+   npx convex dev --once --configure=new
+   ```
+   This will create a new Convex project and configure your environment.
+
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+   In a separate terminal, start Convex:
+   ```bash
+   npx convex dev
+   ```
+
+5. Open http://localhost:5173 in your browser
+
+### Build for Production
+
+```bash
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Project Structure
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+HSATracker-Deux/
+├── convex/                 # Backend (Convex functions)
+│   ├── schema.ts          # Database schema
+│   ├── expenses.ts        # Expense CRUD operations
+│   ├── documents.ts       # Document storage
+│   ├── reimbursements.ts  # Reimbursement tracking
+│   └── optimizer.ts       # DP algorithm for optimization
+├── src/
+│   ├── components/
+│   │   ├── ui/            # shadcn/ui components
+│   │   ├── dashboard/     # Dashboard components
+│   │   ├── expenses/      # Expense management
+│   │   ├── documents/     # Document upload/viewing
+│   │   ├── reimbursements/# Reimbursement tracking
+│   │   ├── optimizer/     # Optimization interface
+│   │   └── shared/        # Shared components
+│   ├── lib/
+│   │   ├── utils.ts       # Utility functions
+│   │   ├── currency.ts    # Currency formatting
+│   │   ├── compression.ts # Image compression
+│   │   └── export.ts      # CSV export
+│   ├── App.tsx
+│   └── main.tsx
+└── docs/
+    └── plans/             # Feature plans
+```
+
+## Data Model
+
+- **Expenses**: Date paid, provider, amount (stored in cents), status, documents
+- **Documents**: File storage with metadata (filename, size, mime type)
+- **Reimbursements**: Links to expenses with amount and date
+
+All monetary values are stored as integers (cents) to avoid floating-point errors.
+
+## Optimizer Algorithm
+
+The reimbursement optimizer uses a Dynamic Programming approach (subset sum):
+- **Goal**: Find the minimum number of expenses that sum to a target amount
+- **Tiebreaker**: FIFO (oldest expenses preferred)
+- **Complexity**: O(n × target) where n = number of expenses
+
+## Future Enhancements
+
+- [ ] OCR integration (Google Cloud Document AI) for automatic receipt parsing
+- [ ] Multi-user authentication
+- [ ] Expense categories (dental, vision, medical, etc.)
+- [ ] Tax year grouping
+- [ ] Dark mode
+
+## License
+
+MIT

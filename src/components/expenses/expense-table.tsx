@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import {
   flexRender,
   getCoreRowModel,
@@ -26,9 +26,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus } from "lucide-react"
+import { Plus, Download } from "lucide-react"
+import { toast } from "sonner"
 
 import { getExpenseColumns } from "./expense-columns"
+import { exportExpensesToCSV } from "@/lib/export"
 import { ExpenseDialog } from "./expense-dialog"
 import { DeleteExpenseDialog } from "./delete-expense-dialog"
 import { ExpenseDetail } from "./expense-detail"
@@ -59,6 +61,28 @@ export function ExpenseTable() {
       }),
     []
   )
+
+  // Keyboard shortcut: Cmd/Ctrl + N to create new expense
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key === "n") {
+        event.preventDefault()
+        setCreateDialogOpen(true)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
+
+  const handleExport = () => {
+    if (!expenses || expenses.length === 0) {
+      toast.error("No expenses to export")
+      return
+    }
+    exportExpensesToCSV(expenses)
+    toast.success("Expenses exported to CSV")
+  }
 
   const table = useReactTable({
     data: expenses ?? [],
@@ -98,6 +122,10 @@ export function ExpenseTable() {
               <SelectItem value="reimbursed">Reimbursed</SelectItem>
             </SelectContent>
           </Select>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </Button>
           <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add Expense

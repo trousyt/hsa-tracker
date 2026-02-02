@@ -20,6 +20,9 @@ npx tsc --noEmit
 
 # Push Convex schema/functions
 npx convex dev --once
+
+# Add new shadcn component
+npx shadcn@latest add <component-name>
 ```
 
 ## Project Architecture
@@ -31,16 +34,22 @@ This is an HSA (Health Savings Account) expense tracking application.
 - UI Components: shadcn/ui + Tailwind CSS v4
 - Backend: Convex (real-time database + file storage)
 - Forms: React Hook Form + Zod validation
+- Tables: TanStack Table
 
 **Key Directories:**
 - `src/components/ui/` - shadcn/ui components (do not edit directly, use `npx shadcn add`)
 - `src/components/expenses/` - Expense CRUD components
-- `src/lib/` - Utilities (currency formatting, validation schemas)
+- `src/components/documents/` - Document upload and viewing
+- `src/components/reimbursements/` - Reimbursement tracking
+- `src/components/optimizer/` - Reimbursement optimizer
+- `src/components/dashboard/` - Dashboard and summary views
+- `src/lib/` - Utilities (currency, compression, validation schemas)
 - `convex/` - Backend functions and schema
 
 **Data Model:**
 - All monetary amounts stored as integer cents (not floating point)
 - Use `dollarsToCents()` / `centsToDollars()` from `src/lib/currency.ts`
+- Documents stored using Convex file storage with three-step pattern
 
 ## Conventions
 
@@ -48,3 +57,21 @@ This is an HSA (Health Savings Account) expense tracking application.
 - Use path alias `@/` for imports from `src/`
 - Currency: Always store as cents, display with `formatCurrency()`
 - Dates: Store as ISO strings (YYYY-MM-DD), use date-fns for formatting
+- Toasts: Use Sonner via `toast.success()`, `toast.error()`
+- Forms: Use React Hook Form with Zod resolver for validation
+- Mutations/Queries: Import from `convex/_generated/api`
+
+## Key Patterns
+
+**Creating a new expense form:**
+```typescript
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useMutation } from "convex/react"
+import { api } from "convex/_generated/api"
+```
+
+**File upload pattern:**
+1. `generateUploadUrl()` - Get signed URL from Convex
+2. `fetch(url, { method: "POST", body: file })` - Upload file
+3. `saveDocument({ storageId, ... })` - Save document record
