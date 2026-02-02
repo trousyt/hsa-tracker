@@ -1,5 +1,6 @@
 import { v } from "convex/values"
 import { mutation, query } from "./_generated/server"
+import { api } from "./_generated/api"
 
 // Generate an upload URL for file storage
 export const generateUploadUrl = mutation({
@@ -25,6 +26,10 @@ export const save = mutation({
       sizeBytes: args.sizeBytes,
       ocrStatus: "pending",
     })
+
+    // Trigger OCR processing in the background
+    await ctx.scheduler.runAfter(0, api.ocr.extractExpenseData, { documentId })
+
     return documentId
   },
 })

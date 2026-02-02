@@ -6,6 +6,7 @@ import {
   CheckCircle,
   Clock,
   CircleDashed,
+  ScanText,
 } from "lucide-react"
 
 import { SummaryCard } from "./summary-card"
@@ -13,6 +14,7 @@ import { formatCurrency } from "@/lib/currency"
 
 export function Dashboard() {
   const summary = useQuery(api.expenses.getSummary)
+  const ocrUsage = useQuery(api.ocr.getCurrentUsage)
 
   if (summary === undefined) {
     return (
@@ -85,6 +87,17 @@ export function Dashboard() {
           color="text-green-500"
         />
       </div>
+
+      {ocrUsage && (
+        <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30 text-sm">
+          <ScanText className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">
+            OCR usage this month: {ocrUsage.pagesProcessed} page
+            {ocrUsage.pagesProcessed !== 1 ? "s" : ""} (~
+            {formatCurrency(ocrUsage.estimatedCostCents)})
+          </span>
+        </div>
+      )}
     </div>
   )
 }

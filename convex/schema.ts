@@ -62,4 +62,10 @@ export default defineSchema({
     date: v.string(), // ISO date
     notes: v.optional(v.string()),
   }).index("by_expense", ["expenseId"]),
+
+  ocrUsage: defineTable({
+    yearMonth: v.string(), // "YYYY-MM" format
+    pagesProcessed: v.number(),
+    lastUpdated: v.number(), // timestamp
+  }).index("by_year_month", ["yearMonth"]),
 })
