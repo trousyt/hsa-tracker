@@ -32,15 +32,23 @@ Convex Action → Cloud Run Proxy → Document AI
 - [ ] Create Google Cloud project (or use existing)
 - [ ] Enable Document AI API
 - [ ] Create Expense Parser processor in Document AI console
-- [ ] Deploy Cloud Run proxy service (see `cloud-run-ocr/README.md`)
+- [ ] Run `bun run ocr:deploy` (handles Cloud Run + Convex setup)
 - [ ] Grant Document AI User role to Cloud Run's service account
-- [ ] Generate shared secret and configure both Cloud Run and Convex
 
-**Environment Variables (Convex Dashboard → Settings → Environment Variables):**
+**Prerequisites:**
+- `gcloud` CLI installed and authenticated
+- Document AI Expense Parser processor ID (from GCP console)
+
+**Deploy command:**
+```bash
+bun run ocr:deploy
 ```
-CLOUD_RUN_OCR_URL=https://ocr-proxy-XXXXX-uc.a.run.app
-CLOUD_RUN_API_SECRET=your-shared-secret
-```
+
+The script will:
+1. Prompt for missing config (auto-generates API secret)
+2. Save all values to `.env.local`
+3. Deploy Cloud Run proxy
+4. Configure Convex environment variables
 
 ### 2. Backend OCR Processing
 
