@@ -570,7 +570,7 @@ README.md                           # Setup instructions
 
 - [x] TypeScript strict mode enabled with no type errors
 - [x] All Convex functions have proper input validation
-- [ ] Core flows (CRUD, upload, reimbursement) have integration tests
+- [x] Core flows (CRUD, upload, reimbursement) have integration tests
 - [x] No console errors in production build
 - [x] All forms validated with Zod schemas
 
