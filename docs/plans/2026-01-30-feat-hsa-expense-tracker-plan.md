@@ -285,18 +285,18 @@ export type ExpenseFormData = z.infer<typeof expenseSchema>
 - Document viewing in modal
 
 **Tasks:**
-- [ ] Add documents table to Convex schema
-- [ ] Implement `generateUploadUrl` mutation
-- [ ] Implement `saveDocument` mutation
-- [ ] Install react-dropzone for drag-and-drop
-- [ ] Create `FileUploader` component with dropzone styling
-- [ ] Add client-side image compression (browser-image-compression)
-- [ ] Create `DocumentGallery` component to display attachments
-- [ ] Create `DocumentViewer` dialog for full-size view
-- [ ] Implement document deletion
-- [ ] Add file type validation (JPEG, PNG, PDF)
-- [ ] Add file size validation (max 10MB before compression)
-- [ ] Add upload progress indicator
+- [x] Add documents table to Convex schema
+- [x] Implement `generateUploadUrl` mutation
+- [x] Implement `saveDocument` mutation
+- [x] Install react-dropzone for drag-and-drop
+- [x] Create `FileUploader` component with dropzone styling
+- [x] Add client-side image compression (browser-image-compression)
+- [x] Create `DocumentGallery` component to display attachments
+- [x] Create `DocumentViewer` dialog for full-size view
+- [x] Implement document deletion
+- [x] Add file type validation (JPEG, PNG, PDF)
+- [x] Add file size validation (max 10MB before compression)
+- [x] Add upload progress indicator
 
 **Additional Dependencies:**
 ```bash

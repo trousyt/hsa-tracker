@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-table"
 import { useQuery } from "convex/react"
 import { api } from "../../../convex/_generated/api"
-import type { Doc } from "../../../convex/_generated/dataModel"
+import type { Doc, Id } from "../../../convex/_generated/dataModel"
 
 import {
   Table,
@@ -24,6 +24,7 @@ import { Plus } from "lucide-react"
 import { getExpenseColumns } from "./expense-columns"
 import { ExpenseDialog } from "./expense-dialog"
 import { DeleteExpenseDialog } from "./delete-expense-dialog"
+import { ExpenseDetail } from "./expense-detail"
 
 type Expense = Doc<"expenses">
 
@@ -35,10 +36,12 @@ export function ExpenseTable() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editExpense, setEditExpense] = useState<Expense | null>(null)
   const [deleteExpense, setDeleteExpense] = useState<Expense | null>(null)
+  const [viewExpenseId, setViewExpenseId] = useState<Id<"expenses"> | null>(null)
 
   const columns = useMemo(
     () =>
       getExpenseColumns({
+        onView: (expense) => setViewExpenseId(expense._id),
         onEdit: (expense) => setEditExpense(expense),
         onDelete: (expense) => setDeleteExpense(expense),
       }),
@@ -98,9 +101,19 @@ export function ExpenseTable() {
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  className="cursor-pointer"
+                  onClick={() => setViewExpenseId(row.original._id)}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell
+                      key={cell.id}
+                      onClick={(e) => {
+                        // Prevent row click when clicking action menu
+                        if (cell.column.id === "actions") {
+                          e.stopPropagation()
+                        }
+                      }}
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -141,6 +154,13 @@ export function ExpenseTable() {
         open={!!deleteExpense}
         onOpenChange={(open) => !open && setDeleteExpense(null)}
         expense={deleteExpense}
+      />
+
+      {/* Detail Sheet */}
+      <ExpenseDetail
+        expenseId={viewExpenseId}
+        open={!!viewExpenseId}
+        onOpenChange={(open) => !open && setViewExpenseId(null)}
       />
     </div>
   )

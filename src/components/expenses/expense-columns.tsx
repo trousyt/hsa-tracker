@@ -1,5 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table"
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, Eye, FileText } from "lucide-react"
 import type { Doc } from "../../../convex/_generated/dataModel"
 
 import { Badge } from "@/components/ui/badge"
@@ -8,6 +8,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { formatCurrency } from "@/lib/currency"
@@ -15,11 +16,13 @@ import { formatCurrency } from "@/lib/currency"
 type Expense = Doc<"expenses">
 
 interface ColumnActionsProps {
+  onView: (expense: Expense) => void
   onEdit: (expense: Expense) => void
   onDelete: (expense: Expense) => void
 }
 
 export function getExpenseColumns({
+  onView,
   onEdit,
   onDelete,
 }: ColumnActionsProps): ColumnDef<Expense>[] {
@@ -39,6 +42,20 @@ export function getExpenseColumns({
     {
       accessorKey: "provider",
       header: "Provider",
+      cell: ({ row }) => {
+        const expense = row.original
+        const hasDocuments = expense.documentIds.length > 0
+        return (
+          <div className="flex items-center gap-2">
+            <span>{row.getValue("provider")}</span>
+            {hasDocuments && (
+              <span title="Has documents">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </span>
+            )}
+          </div>
+        )
+      },
     },
     {
       accessorKey: "amountCents",
@@ -113,10 +130,15 @@ export function getExpenseColumns({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onView(expense)}>
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onEdit(expense)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => onDelete(expense)}
                 className="text-destructive"
