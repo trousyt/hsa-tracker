@@ -392,17 +392,17 @@ convex/
 - Filter expenses by status
 
 **Tasks:**
-- [ ] Add reimbursements table to schema
-- [ ] Implement `recordReimbursement` mutation
-- [ ] Implement `undoReimbursement` mutation
-- [ ] Implement `getReimbursementHistory` query
-- [ ] Update expense status and totals on reimbursement
-- [ ] Create `ReimbursementForm` component (amount, date, notes)
-- [ ] Create `ReimbursementHistory` component (timeline)
-- [ ] Add "Mark Fully Reimbursed" quick action
-- [ ] Add "Undo" action for reimbursements
-- [ ] Add status filter to expense table
-- [ ] Display remaining unreimbursed amount
+- [x] Add reimbursements table to schema
+- [x] Implement `recordReimbursement` mutation
+- [x] Implement `undoReimbursement` mutation
+- [x] Implement `getReimbursementHistory` query
+- [x] Update expense status and totals on reimbursement
+- [x] Create `ReimbursementForm` component (amount, date, notes)
+- [x] Create `ReimbursementHistory` component (timeline)
+- [x] Add "Mark Fully Reimbursed" quick action
+- [x] Add "Undo" action for reimbursements
+- [x] Add status filter to expense table
+- [x] Display remaining unreimbursed amount
 
 **shadcn Components:**
 ```bash

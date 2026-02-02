@@ -19,6 +19,13 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Plus } from "lucide-react"
 
 import { getExpenseColumns } from "./expense-columns"
@@ -27,9 +34,14 @@ import { DeleteExpenseDialog } from "./delete-expense-dialog"
 import { ExpenseDetail } from "./expense-detail"
 
 type Expense = Doc<"expenses">
+type StatusFilter = "all" | "unreimbursed" | "partial" | "reimbursed"
 
 export function ExpenseTable() {
-  const expenses = useQuery(api.expenses.list, {})
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
+  const expenses = useQuery(
+    api.expenses.list,
+    statusFilter === "all" ? {} : { status: statusFilter }
+  )
   const [sorting, setSorting] = useState<SortingState>([])
 
   // Dialog states
@@ -71,10 +83,26 @@ export function ExpenseTable() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Expenses</h2>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Expense
-        </Button>
+        <div className="flex items-center gap-4">
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as StatusFilter)}
+          >
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="unreimbursed">Unreimbursed</SelectItem>
+              <SelectItem value="partial">Partial</SelectItem>
+              <SelectItem value="reimbursed">Reimbursed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Expense
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-md border">
