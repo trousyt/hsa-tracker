@@ -29,11 +29,11 @@ Convex Action → Cloud Run Proxy → Document AI
 
 ### 1. Google Cloud Setup
 
-- [ ] Create Google Cloud project (or use existing)
-- [ ] Enable Document AI API
-- [ ] Create Expense Parser processor in Document AI console
-- [ ] Run `bun run ocr:deploy` (handles Cloud Run + Convex setup)
-- [ ] Grant Document AI User role to Cloud Run's service account
+- [x] Create Google Cloud project (or use existing)
+- [x] Enable Document AI API
+- [x] Create Expense Parser processor in Document AI console
+- [x] Run `bun run ocr:deploy` (handles Cloud Run + Convex setup)
+- [x] Grant Document AI User role to Cloud Run's service account
 
 **Prerequisites:**
 - `gcloud` CLI installed and authenticated
@@ -67,14 +67,14 @@ The script will:
 
 ### 4. Pre-fill Expense Form
 
-- [ ] When document has `ocrExtractedData`, pass as `defaultValues` to expense form
-- [ ] User sees pre-filled fields, edits as needed, saves
-- [ ] No separate review UI needed - form IS the review
+- [x] When document has `ocrExtractedData`, pass as `defaultValues` to expense form
+- [x] User sees pre-filled fields, edits as needed, saves
+- [x] No separate review UI needed - form IS the review
 
 ### 5. Error Handling
 
 - [x] On OCR failure, set `ocrError` field
-- [ ] Show toast: "Couldn't extract data automatically. Please enter manually."
+- [x] Show toast: "Couldn't extract data automatically. Please enter manually."
 - [x] User proceeds with manual entry (existing flow)
 
 ### 6. Usage Tracking
