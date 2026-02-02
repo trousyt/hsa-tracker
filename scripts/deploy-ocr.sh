@@ -5,6 +5,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="$PROJECT_ROOT/.env.local"
 
+# Check gcloud authentication, prompt login if needed
+if ! gcloud auth print-access-token &>/dev/null; then
+  echo "Not authenticated with gcloud. Opening browser to login..."
+  gcloud auth login
+fi
+
 # Helper to read var from .env.local
 get_env_var() {
   grep "^$1=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2-
@@ -74,20 +80,19 @@ PROCESSOR_ID=$(get_env_var "GOOGLE_CLOUD_EXPENSE_PROCESSOR_ID")
 echo ""
 echo "==> Deploying to Cloud Run..."
 
-cd "$PROJECT_ROOT/cloud-run-ocr"
-OUTPUT=$(gcloud run deploy ocr-proxy \
-  --source . \
+gcloud run deploy ocr-proxy \
+  --project "$PROJECT_ID" \
+  --source "$PROJECT_ROOT/cloud-run-ocr" \
   --region us-central1 \
   --allow-unauthenticated \
-  --set-env-vars "API_SECRET=${API_SECRET},GOOGLE_CLOUD_PROJECT_ID=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${LOCATION},GOOGLE_CLOUD_EXPENSE_PROCESSOR_ID=${PROCESSOR_ID}" \
-  2>&1)
+  --set-env-vars "API_SECRET=${API_SECRET},GOOGLE_CLOUD_PROJECT_ID=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${LOCATION},GOOGLE_CLOUD_EXPENSE_PROCESSOR_ID=${PROCESSOR_ID}"
 
-# Extract service URL
-SERVICE_URL=$(echo "$OUTPUT" | grep -oE 'https://[^ ]+\.run\.app' | tail -1)
+# Get the service URL after deployment
+SERVICE_URL=$(gcloud run services describe ocr-proxy --project "$PROJECT_ID" --region us-central1 --format='value(status.url)')
 
 if [ -z "$SERVICE_URL" ]; then
-  echo "Warning: Could not parse service URL"
-  echo "$OUTPUT"
+  echo ""
+  echo "Error: Could not get service URL. Check if deployment succeeded."
   exit 1
 fi
 
