@@ -450,15 +450,15 @@ export const reimbursementSchema = z.object({
 - Results display with one-click apply
 
 **Tasks:**
-- [ ] Implement subset sum DP algorithm with min-items optimization
-- [ ] Add FIFO (oldest first) tiebreaker
-- [ ] Create `optimizeReimbursement` Convex query
-- [ ] Create `OptimizerInput` component (target amount)
-- [ ] Create `OptimizerResults` component (selected expenses)
-- [ ] Handle "no exact match" (show closest under target)
-- [ ] Add "Apply All" button to mark selected as reimbursed
-- [ ] Validate target against available unreimbursed total
-- [ ] Add loading state during calculation
+- [x] Implement subset sum DP algorithm with min-items optimization
+- [x] Add FIFO (oldest first) tiebreaker
+- [x] Create `optimizeReimbursement` Convex query
+- [x] Create `OptimizerInput` component (target amount)
+- [x] Create `OptimizerResults` component (selected expenses)
+- [x] Handle "no exact match" (show closest under target)
+- [x] Add "Apply All" button to mark selected as reimbursed
+- [x] Validate target against available unreimbursed total
+- [x] Add loading state during calculation
 
 **Files to create:**
 ```
