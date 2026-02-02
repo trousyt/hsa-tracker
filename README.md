@@ -24,8 +24,7 @@ A web application for tracking qualified HSA (Health Savings Account) medical ex
 
 ### Prerequisites
 
-- Node.js 18+
-- npm or pnpm
+- [Bun](https://bun.sh/) (recommended) or Node.js 18+
 
 ### Installation
 
@@ -37,23 +36,23 @@ A web application for tracking qualified HSA (Health Savings Account) medical ex
 
 2. Install dependencies:
    ```bash
-   npm install
+   bun install
    ```
 
 3. Set up Convex:
    ```bash
-   npx convex dev --once --configure=new
+   bunx convex dev --once --configure=new
    ```
    This will create a new Convex project and configure your environment.
 
 4. Start the development server:
    ```bash
-   npm run dev
+   bun run dev
    ```
 
    In a separate terminal, start Convex:
    ```bash
-   npx convex dev
+   bunx convex dev
    ```
 
 5. Open http://localhost:5173 in your browser
@@ -61,7 +60,7 @@ A web application for tracking qualified HSA (Health Savings Account) medical ex
 ### Build for Production
 
 ```bash
-npm run build
+bun run build
 ```
 
 ## Project Structure

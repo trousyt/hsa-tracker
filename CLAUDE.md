@@ -6,23 +6,23 @@ This file provides guidance to Claude Code when working with this repository.
 
 ```bash
 # Install dependencies
-npm install
+bun install
 
 # Start development server (frontend + Convex)
-npm run dev          # Start Vite dev server
-npx convex dev       # Start Convex dev server (run in separate terminal)
+bun run dev          # Start Vite dev server
+bunx convex dev      # Start Convex dev server (run in separate terminal)
 
 # Build for production
-npm run build
+bun run build
 
 # Type check
-npx tsc --noEmit
+bunx tsc --noEmit
 
 # Push Convex schema/functions
-npx convex dev --once
+bunx convex dev --once
 
 # Add new shadcn component
-npx shadcn@latest add <component-name>
+bunx shadcn@latest add <component-name>
 ```
 
 ## Project Architecture
@@ -37,7 +37,7 @@ This is an HSA (Health Savings Account) expense tracking application.
 - Tables: TanStack Table
 
 **Key Directories:**
-- `src/components/ui/` - shadcn/ui components (do not edit directly, use `npx shadcn add`)
+- `src/components/ui/` - shadcn/ui components (do not edit directly, use `bunx shadcn add`)
 - `src/components/expenses/` - Expense CRUD components
 - `src/components/documents/` - Document upload and viewing
 - `src/components/reimbursements/` - Reimbursement tracking

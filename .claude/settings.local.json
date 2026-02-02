@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(code:*)",
+      "Bash(git symbolic-ref:*)",
+      "Bash(bun install:*)",
+      "Bash(bun run build:*)",
+      "Bash(bun run dev:*)",
+      "Bash(git add:*)",
+      "Bash(bunx shadcn@latest add:*)",
+      "Bash(bunx convex:*)"
+    ]
+  }
+}
