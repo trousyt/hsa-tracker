@@ -61,6 +61,16 @@ This is an HSA (Health Savings Account) expense tracking application.
 - Forms: Use React Hook Form with Zod resolver for validation
 - Mutations/Queries: Import from `convex/_generated/api`
 
+## Safety Rules
+
+**Never run destructive operations without explicit permission.** This includes:
+- `bunx convex run dev:clearAllData` or any data deletion mutations
+- Database migrations that drop or truncate tables
+- `git reset --hard`, `git clean -f`, or other commands that discard changes
+- Deleting files or directories
+
+When implementing destructive functionality: write the code, push/deploy it, then **stop and wait** for the user to decide when to run it.
+
 ## Key Patterns
 
 **Creating a new expense form:**
