@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react"
 import {
   flexRender,
   getCoreRowModel,
+  getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
   type SortingState,
@@ -26,12 +27,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Download, Upload } from "lucide-react"
+import { Plus, Download, Upload, Search } from "lucide-react"
 import { toast } from "sonner"
 
+import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getExpenseColumns } from "./expense-columns"
 import { exportExpensesToCSV } from "@/lib/export"
+import { formatCurrency } from "@/lib/currency"
 import { ExpenseDialog } from "./expense-dialog"
 import { DeleteExpenseDialog } from "./delete-expense-dialog"
 import { ExpenseDetail } from "./expense-detail"
@@ -46,7 +49,10 @@ export function ExpenseTable() {
     api.expenses.listWithOcrStatus,
     statusFilter === "all" ? {} : { status: statusFilter }
   )
-  const [sorting, setSorting] = useState<SortingState>([])
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "datePaid", desc: true },
+  ])
+  const [globalFilter, setGlobalFilter] = useState("")
 
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -92,9 +98,30 @@ export function ExpenseTable() {
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setSorting,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: (row, _columnId, filterValue: string) => {
+      if (!filterValue) return true
+      const search = filterValue.toLowerCase()
+      const provider = (row.getValue("provider") as string).toLowerCase()
+      const comment = ((row.getValue("comment") as string) || "").toLowerCase()
+      const amount = formatCurrency(row.getValue("amountCents") as number)
+
+      // Provider: contains (case-insensitive)
+      if (provider.includes(search)) return true
+
+      // Comment: contains (case-insensitive)
+      if (comment.includes(search)) return true
+
+      // Amount: exact match (e.g., "125.00" or "$125.00")
+      if (amount === `$${filterValue}` || amount === filterValue) return true
+
+      return false
+    },
     state: {
       sorting,
+      globalFilter,
     },
   })
 
@@ -104,7 +131,9 @@ export function ExpenseTable() {
         <div className="flex justify-between items-center">
           <Skeleton className="h-7 w-24" />
           <div className="flex items-center gap-4">
+            <Skeleton className="h-9 w-[200px]" />
             <Skeleton className="h-9 w-[150px]" />
+            <Skeleton className="h-9 w-24" />
             <Skeleton className="h-9 w-24" />
             <Skeleton className="h-9 w-32" />
           </div>
@@ -147,6 +176,15 @@ export function ExpenseTable() {
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Expenses</h2>
         <div className="flex items-center gap-4">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search expenses..."
+              value={globalFilter}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              className="pl-8 w-[200px]"
+            />
+          </div>
           <Select
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as StatusFilter)}

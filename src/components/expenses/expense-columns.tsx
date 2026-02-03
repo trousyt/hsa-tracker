@@ -1,5 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table"
-import { MoreHorizontal, Pencil, Trash2, Eye, FileText, Sparkles } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, Eye, FileText, Sparkles, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import type { Doc } from "../../../convex/_generated/dataModel"
 
 import { Badge } from "@/components/ui/badge"
@@ -29,7 +29,25 @@ export function getExpenseColumns({
   return [
     {
       accessorKey: "datePaid",
-      header: "Date",
+      header: ({ column }) => {
+        const sorted = column.getIsSorted()
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(sorted === "asc")}
+            className="h-8"
+          >
+            Date
+            {sorted === "asc" ? (
+              <ArrowUp className="ml-2 h-4 w-4" />
+            ) : sorted === "desc" ? (
+              <ArrowDown className="ml-2 h-4 w-4" />
+            ) : (
+              <ArrowUpDown className="ml-2 h-4 w-4" />
+            )}
+          </Button>
+        )
+      },
       cell: ({ row }) => {
         const date = new Date(row.getValue("datePaid"))
         return date.toLocaleDateString("en-US", {
@@ -64,7 +82,27 @@ export function getExpenseColumns({
     },
     {
       accessorKey: "amountCents",
-      header: () => <div className="text-right">Amount</div>,
+      header: ({ column }) => {
+        const sorted = column.getIsSorted()
+        return (
+          <div className="text-right">
+            <Button
+              variant="ghost"
+              onClick={() => column.toggleSorting(sorted === "asc")}
+              className="-mr-4"
+            >
+              Amount
+              {sorted === "asc" ? (
+                <ArrowUp className="ml-2 h-4 w-4" />
+              ) : sorted === "desc" ? (
+                <ArrowDown className="ml-2 h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="ml-2 h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        )
+      },
       cell: ({ row }) => {
         const amountCents = row.getValue("amountCents") as number
         return (
