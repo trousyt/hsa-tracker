@@ -44,7 +44,10 @@ function App() {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-6xl p-8">
-        <h1 className="text-3xl font-bold mb-8">HSA Expense Tracker</h1>
+        <div className="flex items-baseline gap-3 mb-8">
+          <h1 className="text-3xl font-bold">HSA Expense Tracker</h1>
+          <span className="text-sm text-muted-foreground">v{__APP_VERSION__}</span>
+        </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList>
