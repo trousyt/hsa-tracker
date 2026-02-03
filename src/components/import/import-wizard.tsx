@@ -44,6 +44,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { formatCurrency } from "@/lib/currency"
+import { getCategoryLabel } from "@/lib/constants/expense-categories"
 import {
   parseCsvFile,
   matchPdfToExpense,
@@ -197,6 +198,7 @@ export function ImportWizard({ onClose }: ImportWizardProps) {
           provider: row.provider!,
           amountCents: row.amountCents!,
           comment: row.comment || undefined,
+          category: row.category || undefined,
         })),
       })
 
@@ -393,7 +395,7 @@ export function ImportWizard({ onClose }: ImportWizardProps) {
             or click to select a file
           </p>
           <p className="text-xs text-muted-foreground mt-4">
-            Expected columns: Date (YYYY-MM-DD), Paid To, Amount, Comment (optional)
+            Expected columns: Date, Paid To, Amount, Category (optional), Comment (optional)
           </p>
         </div>
       )}
@@ -443,6 +445,7 @@ export function ImportWizard({ onClose }: ImportWizardProps) {
                   <TableHead>Date</TableHead>
                   <TableHead>Provider</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>Category</TableHead>
                   <TableHead>Comment</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
@@ -460,6 +463,20 @@ export function ImportWizard({ onClose }: ImportWizardProps) {
                     <TableCell>{row.provider || "—"}</TableCell>
                     <TableCell className="text-right">
                       {row.amountCents ? formatCurrency(row.amountCents) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {row.category ? (
+                        <span>{getCategoryLabel(row.category)}</span>
+                      ) : row.categoryWarning ? (
+                        <span
+                          className="text-amber-600 text-xs"
+                          title={row.categoryWarning}
+                        >
+                          ⚠ Invalid
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">
                       {row.comment || "—"}

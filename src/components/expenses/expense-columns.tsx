@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { formatCurrency } from "@/lib/currency"
+import { getCategoryLabel } from "@/lib/constants/expense-categories"
 
 type Expense = Doc<"expenses"> & { hasUnacknowledgedOcr?: boolean }
 
@@ -143,6 +144,19 @@ export function getExpenseColumns({
               </span>
             )}
           </div>
+        )
+      },
+    },
+    {
+      accessorKey: "category",
+      header: "Category",
+      cell: ({ row }) => {
+        const category = row.getValue("category") as string | undefined
+        const label = getCategoryLabel(category as import("@/lib/constants/expense-categories").ExpenseCategory | undefined)
+        return (
+          <span className={!category ? "text-muted-foreground" : ""}>
+            {label}
+          </span>
         )
       },
     },

@@ -1,5 +1,10 @@
 import { parseCurrencyToCents } from "./currency"
 import type { Id } from "../../convex/_generated/dataModel"
+import {
+  isValidCategory,
+  EXPENSE_CATEGORY_VALUES,
+  type ExpenseCategory,
+} from "./constants/expense-categories"
 
 // ============ Types ============
 
@@ -8,6 +13,8 @@ export interface ParsedRow {
   provider: string | null
   amountCents: number | null
   comment: string | null
+  category: ExpenseCategory | null
+  categoryWarning?: string
   rowIndex: number
   errors: string[]
 }
@@ -44,6 +51,7 @@ const COLUMN_MAPPINGS: Record<string, string[]> = {
   provider: ["paid to", "paidto", "provider", "vendor"],
   amount: ["amount", "cost", "price"],
   comment: ["comment", "comments", "notes", "note"],
+  category: ["category", "type", "expense type", "expensetype"],
 }
 
 export async function parseCsvFile(file: File): Promise<ParseResult> {
@@ -152,7 +160,50 @@ function parseRow(
       ? cells[indexes.comment]?.trim() || null
       : null
 
-  return { date, provider, amountCents, comment, rowIndex: rowNum, errors }
+  // Category (OPTIONAL column - CSV files without a category column import normally)
+  // If column exists but value is empty/invalid, import as uncategorized with optional warning
+  let category: ExpenseCategory | null = null
+  let categoryWarning: string | undefined = undefined
+  if (indexes.category !== undefined) {
+    const rawCategory = cells[indexes.category]?.trim()
+    if (rawCategory) {
+      const lowerCategory = rawCategory.toLowerCase()
+      // Try exact match first
+      if (isValidCategory(lowerCategory)) {
+        category = lowerCategory as ExpenseCategory
+      } else {
+        // Try to match by converting spaces/underscores to hyphens
+        const normalized = lowerCategory.replace(/[\s_]+/g, "-")
+        if (isValidCategory(normalized)) {
+          category = normalized as ExpenseCategory
+        } else {
+          // Try to find a partial match in the predefined values
+          const matchedCategory = EXPENSE_CATEGORY_VALUES.find(
+            (c) =>
+              c.includes(normalized) ||
+              normalized.includes(c.replace(/-/g, ""))
+          )
+          if (matchedCategory) {
+            category = matchedCategory
+          } else {
+            // Invalid category - import as uncategorized with warning
+            categoryWarning = `Unknown category "${rawCategory}" - imported as uncategorized`
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    date,
+    provider,
+    amountCents,
+    comment,
+    category,
+    categoryWarning,
+    rowIndex: rowNum,
+    errors,
+  }
 }
 
 /**

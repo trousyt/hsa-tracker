@@ -7,6 +7,7 @@ export default defineSchema({
     provider: v.string(), // Provider/vendor name
     amountCents: v.number(), // Amount in cents (integer)
     comment: v.optional(v.string()),
+    category: v.optional(v.string()), // IRS-aligned expense category (optional)
     documentIds: v.array(v.id("documents")),
     totalReimbursedCents: v.number(), // Denormalized for queries
     status: v.union(
@@ -18,7 +19,9 @@ export default defineSchema({
   })
     .index("by_status", ["status"])
     .index("by_date", ["datePaid"])
-    .index("by_status_and_date", ["status", "datePaid"]),
+    .index("by_status_and_date", ["status", "datePaid"])
+    .index("by_category", ["category"])
+    .index("by_category_and_date", ["category", "datePaid"]),
 
   documents: defineTable({
     storageId: v.id("_storage"),

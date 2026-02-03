@@ -11,16 +11,32 @@ export const list = query({
         v.literal("reimbursed")
       )
     ),
+    category: v.optional(v.union(v.string(), v.literal("uncategorized"))),
   },
   handler: async (ctx, args) => {
+    // Start with base query
+    let expenses
+
     if (args.status) {
-      return await ctx.db
+      expenses = await ctx.db
         .query("expenses")
         .withIndex("by_status_and_date", (q) => q.eq("status", args.status!))
         .order("desc")
         .collect()
+    } else {
+      expenses = await ctx.db.query("expenses").order("desc").collect()
     }
-    return await ctx.db.query("expenses").order("desc").collect()
+
+    // Apply category filter client-side (since we can't combine indexes easily)
+    if (args.category) {
+      if (args.category === "uncategorized") {
+        expenses = expenses.filter((e) => !e.category)
+      } else {
+        expenses = expenses.filter((e) => e.category === args.category)
+      }
+    }
+
+    return expenses
   },
 })
 
@@ -39,6 +55,7 @@ export const create = mutation({
     provider: v.string(),
     amountCents: v.number(),
     comment: v.optional(v.string()),
+    category: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const expenseId = await ctx.db.insert("expenses", {
@@ -46,6 +63,7 @@ export const create = mutation({
       provider: args.provider,
       amountCents: args.amountCents,
       comment: args.comment,
+      category: args.category,
       documentIds: [],
       totalReimbursedCents: 0,
       status: "unreimbursed",
@@ -63,6 +81,7 @@ export const createBatch = mutation({
         provider: v.string(),
         amountCents: v.number(),
         comment: v.optional(v.string()),
+        category: v.optional(v.string()),
       })
     ),
   },
@@ -74,6 +93,7 @@ export const createBatch = mutation({
         provider: expense.provider,
         amountCents: expense.amountCents,
         comment: expense.comment,
+        category: expense.category,
         documentIds: [],
         totalReimbursedCents: 0,
         status: "unreimbursed",
@@ -92,6 +112,7 @@ export const update = mutation({
     provider: v.optional(v.string()),
     amountCents: v.optional(v.number()),
     comment: v.optional(v.string()),
+    category: v.optional(v.union(v.string(), v.null())), // Allow null to clear category
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args
@@ -149,15 +170,25 @@ export const listWithOcrStatus = query({
         v.literal("reimbursed")
       )
     ),
+    category: v.optional(v.union(v.string(), v.literal("uncategorized"))),
   },
   handler: async (ctx, args) => {
-    const expenses = args.status
+    let expenses = args.status
       ? await ctx.db
           .query("expenses")
           .withIndex("by_status_and_date", (q) => q.eq("status", args.status!))
           .order("desc")
           .collect()
       : await ctx.db.query("expenses").order("desc").collect()
+
+    // Apply category filter
+    if (args.category) {
+      if (args.category === "uncategorized") {
+        expenses = expenses.filter((e) => !e.category)
+      } else {
+        expenses = expenses.filter((e) => e.category === args.category)
+      }
+    }
 
     return Promise.all(
       expenses.map(async (expense) => {

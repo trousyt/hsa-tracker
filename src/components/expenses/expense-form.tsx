@@ -19,8 +19,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { expenseSchema, type ExpenseFormData } from "@/lib/validations/expense"
+import { EXPENSE_CATEGORIES } from "@/lib/constants/expense-categories"
 
 interface ExpenseFormProps {
   defaultValues?: Partial<ExpenseFormData>
@@ -42,6 +50,7 @@ export function ExpenseForm({
       provider: defaultValues?.provider ?? "",
       amount: defaultValues?.amount ?? undefined,
       comment: defaultValues?.comment ?? "",
+      category: defaultValues?.category ?? undefined,
     },
   })
 
@@ -98,6 +107,37 @@ export function ExpenseForm({
               <FormControl>
                 <Input placeholder="e.g., Dr. Smith, CVS Pharmacy" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="category"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Category (optional)</FormLabel>
+              <Select
+                onValueChange={(value) =>
+                  field.onChange(value === "__none__" ? null : value)
+                }
+                value={field.value ?? "__none__"}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="__none__">No Category</SelectItem>
+                  {EXPENSE_CATEGORIES.map((category) => (
+                    <SelectItem key={category.value} value={category.value}>
+                      {category.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

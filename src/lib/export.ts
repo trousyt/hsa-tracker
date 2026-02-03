@@ -1,5 +1,7 @@
 import type { Doc } from "../../convex/_generated/dataModel"
 import { centsToDollars } from "./currency"
+import { getCategoryLabel } from "./constants/expense-categories"
+import type { ExpenseCategory } from "./constants/expense-categories"
 
 type Expense = Doc<"expenses">
 
@@ -11,6 +13,7 @@ export function exportExpensesToCSV(expenses: Expense[]): void {
     "Reimbursed",
     "Remaining",
     "Status",
+    "Category",
     "Comment",
   ]
 
@@ -23,6 +26,7 @@ export function exportExpensesToCSV(expenses: Expense[]): void {
       centsToDollars(expense.totalReimbursedCents).toFixed(2),
       centsToDollars(remaining).toFixed(2),
       expense.status,
+      getCategoryLabel(expense.category as ExpenseCategory | undefined),
       expense.comment ? `"${expense.comment.replace(/"/g, '""')}"` : "",
     ]
   })
