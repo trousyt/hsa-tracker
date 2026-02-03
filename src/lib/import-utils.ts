@@ -22,13 +22,19 @@ export interface MatchResult {
   filename: string
   expenseId: Id<"expenses"> | null
   matched: boolean
-  matchedExpense?: { date: string; provider: string }
+  matchedExpense?: { date: string; provider: string; amountCents: number }
 }
 
 export interface ImportExpense {
   _id: Id<"expenses">
   datePaid: string
   provider: string
+  amountCents: number
+}
+
+export interface ExtractedDate {
+  fullDate: string | null  // YYYY-MM-DD (validated)
+  yearMonth: string | null // YYYY-MM (validated)
 }
 
 // ============ CSV Parsing ============
@@ -107,14 +113,13 @@ function parseRow(
 ): ParsedRow {
   const errors: string[] = []
 
-  // Date
+  // Date (supports YYYY-MM-DD, MM-DD-YYYY, MM/DD/YYYY)
   let date: string | null = null
   if (indexes.date !== undefined) {
     const dateStr = cells[indexes.date]?.trim()
-    if (dateStr && isValidISODate(dateStr)) {
-      date = dateStr
-    } else {
-      errors.push("Invalid date (expected YYYY-MM-DD)")
+    date = parseDateToISO(dateStr)
+    if (!date) {
+      errors.push("Invalid date (expected YYYY-MM-DD or MM-DD-YYYY)")
     }
   } else {
     errors.push("Date column not found")
@@ -150,10 +155,44 @@ function parseRow(
   return { date, provider, amountCents, comment, rowIndex: rowNum, errors }
 }
 
-export function isValidISODate(dateStr: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false
+/**
+ * Parses a date string in various formats and returns YYYY-MM-DD or null if invalid.
+ * Supports: YYYY-MM-DD, MM-DD-YYYY, MM/DD/YYYY
+ */
+export function parseDateToISO(dateStr: string): string | null {
+  if (!dateStr) return null
+
+  // Try YYYY-MM-DD first
+  const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch
+    if (isValidDateParts(year, month, day)) {
+      return `${year}-${month}-${day}`
+    }
+  }
+
+  // Try MM-DD-YYYY or MM/DD/YYYY
+  const usMatch = dateStr.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/)
+  if (usMatch) {
+    const [, month, day, year] = usMatch
+    const paddedMonth = month.padStart(2, "0")
+    const paddedDay = day.padStart(2, "0")
+    if (isValidDateParts(year, paddedMonth, paddedDay)) {
+      return `${year}-${paddedMonth}-${paddedDay}`
+    }
+  }
+
+  return null
+}
+
+function isValidDateParts(year: string, month: string, day: string): boolean {
+  const dateStr = `${year}-${month}-${day}`
   const date = new Date(dateStr + "T00:00:00")
   return !isNaN(date.getTime()) && dateStr === date.toISOString().split("T")[0]
+}
+
+export function isValidISODate(dateStr: string): boolean {
+  return parseDateToISO(dateStr) !== null
 }
 
 // ============ PDF Matching ============
@@ -164,44 +203,96 @@ export function matchPdfToExpense(
   filename: string,
   expenses: ImportExpense[]
 ): MatchResult {
-  const extractedDate = extractDateFromFilename(filename)
+  const extracted = extractDateFromFilename(filename)
 
-  if (!extractedDate) {
-    return { filename, expenseId: null, matched: false }
-  }
+  // Strategy 1: Exact date match (existing behavior)
+  if (extracted.fullDate) {
+    const sameDate = expenses.filter((e) => e.datePaid === extracted.fullDate)
 
-  const sameDate = expenses.filter((e) => e.datePaid === extractedDate)
-
-  if (sameDate.length === 0) {
-    return { filename, expenseId: null, matched: false }
-  }
-
-  if (sameDate.length === 1) {
-    return {
-      filename,
-      expenseId: sameDate[0]._id,
-      matched: true,
-      matchedExpense: {
-        date: sameDate[0].datePaid,
-        provider: sameDate[0].provider,
-      },
+    if (sameDate.length === 0) {
+      // No exact match - do NOT fall back to month matching for full-date files
+      return { filename, expenseId: null, matched: false }
     }
-  }
 
-  // Multiple expenses on same date: fuzzy match provider
-  const normalizedFilename = normalizeForMatching(filename)
-
-  for (const expense of sameDate) {
-    const normalizedProvider = normalizeForMatching(expense.provider)
-    if (
-      normalizedProvider.length >= MIN_PROVIDER_LENGTH &&
-      normalizedFilename.includes(normalizedProvider)
-    ) {
+    if (sameDate.length === 1) {
       return {
         filename,
-        expenseId: expense._id,
+        expenseId: sameDate[0]._id,
         matched: true,
-        matchedExpense: { date: expense.datePaid, provider: expense.provider },
+        matchedExpense: {
+          date: sameDate[0].datePaid,
+          provider: sameDate[0].provider,
+          amountCents: sameDate[0].amountCents,
+        },
+      }
+    }
+
+    // Multiple expenses on same date - try provider fuzzy match
+    const normalizedFilename = normalizeForMatching(filename)
+    for (const expense of sameDate) {
+      const normalizedProvider = normalizeForMatching(expense.provider)
+      if (
+        normalizedProvider.length >= MIN_PROVIDER_LENGTH &&
+        normalizedFilename.includes(normalizedProvider)
+      ) {
+        return {
+          filename,
+          expenseId: expense._id,
+          matched: true,
+          matchedExpense: {
+            date: expense.datePaid,
+            provider: expense.provider,
+            amountCents: expense.amountCents,
+          },
+        }
+      }
+    }
+
+    return { filename, expenseId: null, matched: false }
+  }
+
+  // Strategy 2: Month + provider fuzzy match (only for month-only filenames)
+  if (extracted.yearMonth) {
+    const sameMonth = expenses.filter((e) =>
+      e.datePaid.startsWith(extracted.yearMonth!)
+    )
+
+    if (sameMonth.length === 0) {
+      return { filename, expenseId: null, matched: false }
+    }
+
+    if (sameMonth.length === 1) {
+      // Only one expense in that month - auto-match
+      return {
+        filename,
+        expenseId: sameMonth[0]._id,
+        matched: true,
+        matchedExpense: {
+          date: sameMonth[0].datePaid,
+          provider: sameMonth[0].provider,
+          amountCents: sameMonth[0].amountCents,
+        },
+      }
+    }
+
+    // Multiple expenses in month - fuzzy match provider from filename
+    const normalizedFilename = normalizeForMatching(filename)
+    for (const expense of sameMonth) {
+      const normalizedProvider = normalizeForMatching(expense.provider)
+      if (
+        normalizedProvider.length >= MIN_PROVIDER_LENGTH &&
+        normalizedFilename.includes(normalizedProvider)
+      ) {
+        return {
+          filename,
+          expenseId: expense._id,
+          matched: true,
+          matchedExpense: {
+            date: expense.datePaid,
+            provider: expense.provider,
+            amountCents: expense.amountCents,
+          },
+        }
       }
     }
   }
@@ -209,19 +300,44 @@ export function matchPdfToExpense(
   return { filename, expenseId: null, matched: false }
 }
 
-export function extractDateFromFilename(filename: string): string | null {
+function isValidFullDate(dateStr: string): boolean {
+  const date = new Date(dateStr + "T00:00:00")
+  return !isNaN(date.getTime()) && dateStr === date.toISOString().split("T")[0]
+}
+
+export function extractDateFromFilename(filename: string): ExtractedDate {
   const name = filename.replace(/\.[^.]+$/, "")
 
-  // YYYY-MM-DD
+  // Try YYYY-MM-DD first (with validation)
   const isoMatch = name.match(/(\d{4})-(\d{2})-(\d{2})/)
-  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`
+  if (isoMatch) {
+    const dateStr = `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`
+    if (isValidFullDate(dateStr)) {
+      return { fullDate: dateStr, yearMonth: `${isoMatch[1]}-${isoMatch[2]}` }
+    }
+  }
 
-  // YYYYMMDD
+  // Try YYYYMMDD (8 consecutive digits, with validation)
   const compactMatch = name.match(/(\d{4})(\d{2})(\d{2})/)
-  if (compactMatch)
-    return `${compactMatch[1]}-${compactMatch[2]}-${compactMatch[3]}`
+  if (compactMatch) {
+    const dateStr = `${compactMatch[1]}-${compactMatch[2]}-${compactMatch[3]}`
+    if (isValidFullDate(dateStr)) {
+      return { fullDate: dateStr, yearMonth: `${compactMatch[1]}-${compactMatch[2]}` }
+    }
+  }
 
-  return null
+  // Try YYYY-MM only (month-based, no full date in filename)
+  // Use boundaries to avoid matching partial dates like 2024-01-15
+  const monthMatch = name.match(/(?:^|[^0-9])(\d{4})-(\d{2})(?:[^0-9]|$)/)
+  if (monthMatch) {
+    const year = parseInt(monthMatch[1], 10)
+    const month = parseInt(monthMatch[2], 10)
+    if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12) {
+      return { fullDate: null, yearMonth: `${monthMatch[1]}-${monthMatch[2]}` }
+    }
+  }
+
+  return { fullDate: null, yearMonth: null }
 }
 
 export function normalizeForMatching(text: string): string {

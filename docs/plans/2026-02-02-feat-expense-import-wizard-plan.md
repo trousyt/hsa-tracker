@@ -2,7 +2,7 @@
 title: "feat: Add expense import wizard for CSV migration"
 type: feat
 date: 2026-02-02
-revised: 2026-02-02
+revised: 2026-02-03
 ---
 
 # feat: Add Expense Import Wizard for CSV Migration
@@ -31,6 +31,12 @@ A simplified 3-step flow:
 - **2 files total** - One component, one utility module
 - **Button in Expenses tab** - Not a primary navigation tab
 - **Reuse existing utilities** - Use `parseCurrencyToCents` from currency.ts
+
+### Polish Features (2026-02-03)
+
+- **Document Preview** - Eye icon button opens Dialog to preview PDF/image before matching
+- **Cost in Dropdown** - Show expense amount in the select list for easier identification
+- **Month-based Matching** - Support `YYYY-MM <Provider>.pdf` format for flexible matching
 
 ## Technical Considerations
 
@@ -106,37 +112,47 @@ const text = (await file.text())
   .replace(/\r/g, '\n')        // Normalize CR
 ```
 
-### PDF Matching Algorithm (Simplified)
+### PDF Matching Algorithm (Enhanced)
 
-Binary matching: matched or unmatched (no confidence levels).
+Binary matching with two strategies: exact date match and month-based fallback.
 
 ```typescript
+export interface ExtractedDate {
+  fullDate: string | null  // YYYY-MM-DD (validated)
+  yearMonth: string | null // YYYY-MM (validated)
+}
+
 export interface MatchResult {
   filename: string
   expenseId: Id<'expenses'> | null
   matched: boolean
-  matchedExpense?: { date: string; provider: string }
+  matchedExpense?: { date: string; provider: string; amountCents: number }
 }
 
-export function matchPdfToExpense(filename: string, expenses: Expense[]): MatchResult {
-  const extractedDate = extractDateFromFilename(filename)
-  if (!extractedDate) return { filename, expenseId: null, matched: false }
+export interface ImportExpense {
+  _id: Id<'expenses'>
+  datePaid: string
+  provider: string
+  amountCents: number
+}
 
-  const sameDate = expenses.filter(e => e.datePaid === extractedDate)
+export function matchPdfToExpense(filename: string, expenses: ImportExpense[]): MatchResult {
+  const extracted = extractDateFromFilename(filename)
 
-  if (sameDate.length === 1) {
-    return { filename, expenseId: sameDate[0]._id, matched: true, matchedExpense: {...} }
+  // Strategy 1: Exact date match
+  if (extracted.fullDate) {
+    const sameDate = expenses.filter(e => e.datePaid === extracted.fullDate)
+    // If no exact match, do NOT fall back to month matching for full-date files
+    if (sameDate.length === 0) return { filename, expenseId: null, matched: false }
+    if (sameDate.length === 1) return { /* matched */ }
+    // Multiple: fuzzy match provider (require min 4 chars)
   }
 
-  if (sameDate.length > 1) {
-    // Fuzzy match provider (require min 4 chars to avoid false positives)
-    const normalizedFilename = normalizeForMatching(filename)
-    for (const expense of sameDate) {
-      const normalizedProvider = normalizeForMatching(expense.provider)
-      if (normalizedProvider.length >= 4 && normalizedFilename.includes(normalizedProvider)) {
-        return { filename, expenseId: expense._id, matched: true, matchedExpense: {...} }
-      }
-    }
+  // Strategy 2: Month + provider match (only for month-only filenames like "2024-01 Dr Smith.pdf")
+  if (extracted.yearMonth) {
+    const sameMonth = expenses.filter(e => e.datePaid.startsWith(extracted.yearMonth!))
+    if (sameMonth.length === 1) return { /* auto-match */ }
+    // Multiple: fuzzy match provider
   }
 
   return { filename, expenseId: null, matched: false }
@@ -193,6 +209,15 @@ async function handleImportAll(rows: ValidatedRow[], onProgress: (n: number) => 
 - [x] "Skip" button to finish without attaching documents
 - [x] Progress indicator during upload
 
+### Polish Features (2026-02-03)
+- [x] Preview button (Eye icon) to view PDF/image in Dialog before matching
+- [x] Show expense amount in dropdown (`YYYY-MM-DD • Provider • $XX.XX`)
+- [x] Show expense amount in matched expense display under filename
+- [x] Wider dropdown (280px) to accommodate amount display
+- [x] Month-based matching: `YYYY-MM <Provider>.pdf` matches expenses in that month
+- [x] Validated date extraction (rejects invalid dates like month 13, Feb 30)
+- [x] Full-date files do NOT fall back to month matching (preserves match confidence)
+
 ### Step 3: Complete
 - [x] Summary: X expenses created, Y documents attached
 - [x] "View Expenses" button returns to expense table
@@ -201,8 +226,12 @@ async function handleImportAll(rows: ValidatedRow[], onProgress: (n: number) => 
 ### Testing Requirements
 - [x] Unit test: CSV parsing with various edge cases (BOM, CRLF, quoted fields)
 - [x] Unit test: Date validation (valid dates, invalid dates like 2024-02-30)
-- [x] Unit test: PDF filename date extraction
+- [x] Unit test: PDF filename date extraction (ISO, compact, month-only formats)
 - [x] Unit test: Fuzzy provider matching (including min-length guard)
+- [x] Unit test: Month-only date extraction (`2024-01 Provider.pdf`)
+- [x] Unit test: Invalid date rejection (month 13, Feb 30)
+- [x] Unit test: Month-based matching (single expense, multiple with provider match)
+- [x] Unit test: Full-date files don't fall back to month matching
 
 ## Success Metrics
 
@@ -267,13 +296,19 @@ export interface MatchResult {
   filename: string
   expenseId: Id<'expenses'> | null
   matched: boolean
-  matchedExpense?: { date: string; provider: string }
+  matchedExpense?: { date: string; provider: string; amountCents: number }
 }
 
-interface Expense {
+export interface ImportExpense {
   _id: Id<'expenses'>
   datePaid: string
   provider: string
+  amountCents: number
+}
+
+export interface ExtractedDate {
+  fullDate: string | null  // YYYY-MM-DD (validated)
+  yearMonth: string | null // YYYY-MM (validated)
 }
 
 // ============ CSV Parsing ============
@@ -400,40 +435,83 @@ function isValidISODate(dateStr: string): boolean {
 
 const MIN_PROVIDER_LENGTH = 4
 
-export function matchPdfToExpense(filename: string, expenses: Expense[]): MatchResult {
-  const extractedDate = extractDateFromFilename(filename)
+export function matchPdfToExpense(filename: string, expenses: ImportExpense[]): MatchResult {
+  const extracted = extractDateFromFilename(filename)
 
-  if (!extractedDate) {
-    return { filename, expenseId: null, matched: false }
-  }
-
-  const sameDate = expenses.filter(e => e.datePaid === extractedDate)
-
-  if (sameDate.length === 0) {
-    return { filename, expenseId: null, matched: false }
-  }
-
-  if (sameDate.length === 1) {
-    return {
-      filename,
-      expenseId: sameDate[0]._id,
-      matched: true,
-      matchedExpense: { date: sameDate[0].datePaid, provider: sameDate[0].provider },
+  // Strategy 1: Exact date match
+  if (extracted.fullDate) {
+    const sameDate = expenses.filter(e => e.datePaid === extracted.fullDate)
+    if (sameDate.length === 0) {
+      // No exact match - do NOT fall back to month matching for full-date files
+      return { filename, expenseId: null, matched: false }
     }
-  }
-
-  // Multiple expenses on same date: fuzzy match provider
-  const normalizedFilename = normalizeForMatching(filename)
-
-  for (const expense of sameDate) {
-    const normalizedProvider = normalizeForMatching(expense.provider)
-    if (normalizedProvider.length >= MIN_PROVIDER_LENGTH &&
-        normalizedFilename.includes(normalizedProvider)) {
+    if (sameDate.length === 1) {
       return {
         filename,
-        expenseId: expense._id,
+        expenseId: sameDate[0]._id,
         matched: true,
-        matchedExpense: { date: expense.datePaid, provider: expense.provider },
+        matchedExpense: {
+          date: sameDate[0].datePaid,
+          provider: sameDate[0].provider,
+          amountCents: sameDate[0].amountCents,
+        },
+      }
+    }
+    // Multiple expenses on same date - try provider fuzzy match
+    const normalizedFilename = normalizeForMatching(filename)
+    for (const expense of sameDate) {
+      const normalizedProvider = normalizeForMatching(expense.provider)
+      if (normalizedProvider.length >= MIN_PROVIDER_LENGTH &&
+          normalizedFilename.includes(normalizedProvider)) {
+        return {
+          filename,
+          expenseId: expense._id,
+          matched: true,
+          matchedExpense: {
+            date: expense.datePaid,
+            provider: expense.provider,
+            amountCents: expense.amountCents,
+          },
+        }
+      }
+    }
+    return { filename, expenseId: null, matched: false }
+  }
+
+  // Strategy 2: Month + provider fuzzy match (only for month-only filenames)
+  if (extracted.yearMonth) {
+    const sameMonth = expenses.filter(e => e.datePaid.startsWith(extracted.yearMonth!))
+    if (sameMonth.length === 0) {
+      return { filename, expenseId: null, matched: false }
+    }
+    if (sameMonth.length === 1) {
+      return {
+        filename,
+        expenseId: sameMonth[0]._id,
+        matched: true,
+        matchedExpense: {
+          date: sameMonth[0].datePaid,
+          provider: sameMonth[0].provider,
+          amountCents: sameMonth[0].amountCents,
+        },
+      }
+    }
+    // Multiple expenses in month - fuzzy match provider
+    const normalizedFilename = normalizeForMatching(filename)
+    for (const expense of sameMonth) {
+      const normalizedProvider = normalizeForMatching(expense.provider)
+      if (normalizedProvider.length >= MIN_PROVIDER_LENGTH &&
+          normalizedFilename.includes(normalizedProvider)) {
+        return {
+          filename,
+          expenseId: expense._id,
+          matched: true,
+          matchedExpense: {
+            date: expense.datePaid,
+            provider: expense.provider,
+            amountCents: expense.amountCents,
+          },
+        }
       }
     }
   }
@@ -441,21 +519,46 @@ export function matchPdfToExpense(filename: string, expenses: Expense[]): MatchR
   return { filename, expenseId: null, matched: false }
 }
 
-function extractDateFromFilename(filename: string): string | null {
-  const name = filename.replace(/\.[^.]+$/, '')
-
-  // YYYY-MM-DD
-  const isoMatch = name.match(/(\d{4})-(\d{2})-(\d{2})/)
-  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`
-
-  // YYYYMMDD
-  const compactMatch = name.match(/(\d{4})(\d{2})(\d{2})/)
-  if (compactMatch) return `${compactMatch[1]}-${compactMatch[2]}-${compactMatch[3]}`
-
-  return null
+function isValidFullDate(dateStr: string): boolean {
+  const date = new Date(dateStr + 'T00:00:00')
+  return !isNaN(date.getTime()) && dateStr === date.toISOString().split('T')[0]
 }
 
-function normalizeForMatching(text: string): string {
+export function extractDateFromFilename(filename: string): ExtractedDate {
+  const name = filename.replace(/\.[^.]+$/, '')
+
+  // Try YYYY-MM-DD first (with validation)
+  const isoMatch = name.match(/(\d{4})-(\d{2})-(\d{2})/)
+  if (isoMatch) {
+    const dateStr = `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`
+    if (isValidFullDate(dateStr)) {
+      return { fullDate: dateStr, yearMonth: `${isoMatch[1]}-${isoMatch[2]}` }
+    }
+  }
+
+  // Try YYYYMMDD (8 consecutive digits, with validation)
+  const compactMatch = name.match(/(\d{4})(\d{2})(\d{2})/)
+  if (compactMatch) {
+    const dateStr = `${compactMatch[1]}-${compactMatch[2]}-${compactMatch[3]}`
+    if (isValidFullDate(dateStr)) {
+      return { fullDate: dateStr, yearMonth: `${compactMatch[1]}-${compactMatch[2]}` }
+    }
+  }
+
+  // Try YYYY-MM only (month-based, no full date in filename)
+  const monthMatch = name.match(/(?:^|[^0-9])(\d{4})-(\d{2})(?:[^0-9]|$)/)
+  if (monthMatch) {
+    const year = parseInt(monthMatch[1], 10)
+    const month = parseInt(monthMatch[2], 10)
+    if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12) {
+      return { fullDate: null, yearMonth: `${monthMatch[1]}-${monthMatch[2]}` }
+    }
+  }
+
+  return { fullDate: null, yearMonth: null }
+}
+
+export function normalizeForMatching(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 ```
