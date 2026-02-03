@@ -6,7 +6,11 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores([
+    'dist',
+    'src/components/ui/*',      // shadcn/ui generated components
+    'convex/_generated/*',       // Convex generated files
+  ]),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

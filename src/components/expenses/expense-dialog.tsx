@@ -21,7 +21,6 @@ import {
   compressImage,
   isValidFileType,
   isValidFileSize,
-  formatFileSize,
 } from "@/lib/compression"
 
 interface OcrExtractedData {
@@ -122,7 +121,7 @@ export function ExpenseDialog({
 
   const ocrStatusFromDoc: OcrStatus = uploadedDocument?.ocrStatus ?? "idle"
 
-  const uploadFile = async (file: File) => {
+  const uploadFile = useCallback(async (file: File) => {
     try {
       // Validate file
       if (!isValidFileType(file)) {
@@ -178,13 +177,13 @@ export function ExpenseDialog({
       setUploadError(message)
       toast.error(message)
     }
-  }
+  }, [generateUploadUrl, saveDocument])
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
       uploadFile(acceptedFiles[0])
     }
-  }, [])
+  }, [uploadFile])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

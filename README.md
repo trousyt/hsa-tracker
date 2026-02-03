@@ -1,10 +1,14 @@
 # HSA Expense Tracker
 
+[![CI](https://github.com/trousyt/hsa-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/trousyt/hsa-tracker/actions/workflows/ci.yml)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/trousyt/hsa-tracker)
+
 A web application for tracking qualified HSA (Health Savings Account) medical expenses. Store receipts, track reimbursements, and optimize your HSA distributions.
 
 ## Features
 
 - **Expense Management**: Create, edit, and delete medical expenses with date, provider, amount, and notes
+- **Expense Categories**: 17 IRS-aligned categories based on Publication 502 (medical, dental, vision, prescriptions, etc.)
 - **Document Storage**: Upload receipts and statements (JPEG, PNG, PDF) with automatic compression
 - **OCR Receipt Parsing**: Automatic extraction of date, amount, and provider from uploaded receipts using Google Cloud Document AI
 - **Reimbursement Tracking**: Track full and partial reimbursements with complete history
@@ -113,7 +117,7 @@ The reimbursement optimizer uses a Dynamic Programming approach (subset sum):
 ## Future Enhancements
 
 - [ ] Multi-user authentication
-- [ ] Expense categories (dental, vision, medical, etc.)
+- [x] Expense categories (dental, vision, medical, etc.)
 - [ ] Tax year grouping
 - [ ] Dark mode
 

@@ -39,16 +39,22 @@ import { ExpenseDialog } from "./expense-dialog"
 import { DeleteExpenseDialog } from "./delete-expense-dialog"
 import { ExpenseDetail } from "./expense-detail"
 import { ImportWizard } from "../import/import-wizard"
+import {
+  EXPENSE_CATEGORIES,
+  type ExpenseCategory,
+} from "@/lib/constants/expense-categories"
 
 type Expense = Doc<"expenses">
 type StatusFilter = "all" | "unreimbursed" | "partial" | "reimbursed"
+type CategoryFilter = "all" | "uncategorized" | ExpenseCategory
 
 export function ExpenseTable() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
-  const expenses = useQuery(
-    api.expenses.listWithOcrStatus,
-    statusFilter === "all" ? {} : { status: statusFilter }
-  )
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all")
+  const expenses = useQuery(api.expenses.listWithOcrStatus, {
+    ...(statusFilter !== "all" && { status: statusFilter }),
+    ...(categoryFilter !== "all" && { category: categoryFilter }),
+  })
   const [sorting, setSorting] = useState<SortingState>([
     { id: "datePaid", desc: true },
   ])
@@ -93,6 +99,7 @@ export function ExpenseTable() {
     toast.success("Expenses exported to CSV")
   }
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table API is designed this way
   const table = useReactTable({
     data: expenses ?? [],
     columns,
@@ -197,6 +204,23 @@ export function ExpenseTable() {
               <SelectItem value="unreimbursed">Unreimbursed</SelectItem>
               <SelectItem value="partial">Partial</SelectItem>
               <SelectItem value="reimbursed">Reimbursed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={categoryFilter}
+            onValueChange={(value) => setCategoryFilter(value as CategoryFilter)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="uncategorized">Uncategorized</SelectItem>
+              {EXPENSE_CATEGORIES.map((category) => (
+                <SelectItem key={category.value} value={category.value}>
+                  {category.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Button variant="outline" onClick={() => setShowImportWizard(true)}>

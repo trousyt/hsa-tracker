@@ -35,16 +35,16 @@ export function FileUploader({ expenseId, onUploadComplete }: FileUploaderProps)
   const saveDocument = useMutation(api.documents.save)
   const addToExpense = useMutation(api.documents.addToExpense)
 
-  const updateFileProgress = (
-    index: number,
-    updates: Partial<UploadingFile>
-  ) => {
-    setUploadingFiles((files) =>
-      files.map((f, i) => (i === index ? { ...f, ...updates } : f))
-    )
-  }
+  const updateFileProgress = useCallback(
+    (index: number, updates: Partial<UploadingFile>) => {
+      setUploadingFiles((files) =>
+        files.map((f, i) => (i === index ? { ...f, ...updates } : f))
+      )
+    },
+    []
+  )
 
-  const uploadFile = async (file: File, index: number) => {
+  const uploadFile = useCallback(async (file: File, index: number) => {
     try {
       // Validate file
       if (!isValidFileType(file)) {
@@ -101,7 +101,7 @@ export function FileUploader({ expenseId, onUploadComplete }: FileUploaderProps)
       updateFileProgress(index, { status: "error", error: message })
       toast.error(message)
     }
-  }
+  }, [updateFileProgress, generateUploadUrl, saveDocument, addToExpense, expenseId, onUploadComplete])
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -119,7 +119,7 @@ export function FileUploader({ expenseId, onUploadComplete }: FileUploaderProps)
         uploadFile(acceptedFiles[index], actualIndex)
       })
     },
-    [uploadingFiles.length]
+    [uploadingFiles.length, uploadFile]
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

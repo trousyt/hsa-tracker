@@ -71,6 +71,10 @@ This is an HSA (Health Savings Account) expense tracking application.
 
 When implementing destructive functionality: write the code, push/deploy it, then **stop and wait** for the user to decide when to run it.
 
+## User Preferences
+
+- **Ask for information instead of using placeholders.** When you need specific information (URLs, credentials, names, etc.), ask the user directly rather than inserting placeholders or leaving manual steps.
+
 ## Key Patterns
 
 **Creating a new expense form:**

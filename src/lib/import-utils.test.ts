@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest"
+import type { Id } from "../../convex/_generated/dataModel"
 import {
   parseCsvFile,
   parseCSVLine,
@@ -339,12 +340,12 @@ describe("extractDateFromFilename", () => {
 
 describe("matchPdfToExpense", () => {
   const mockExpenses = [
-    { _id: "exp1" as any, datePaid: "2024-01-15", provider: "Dr. Smith", amountCents: 12500 },
-    { _id: "exp2" as any, datePaid: "2024-01-15", provider: "Pharmacy Plus", amountCents: 4500 },
-    { _id: "exp3" as any, datePaid: "2024-01-20", provider: "Hospital", amountCents: 50000 },
-    { _id: "exp4" as any, datePaid: "2024-02-10", provider: "Dentist", amountCents: 20000 },
-    { _id: "exp5" as any, datePaid: "2024-03-05", provider: "Eye Doctor", amountCents: 15000 },
-    { _id: "exp6" as any, datePaid: "2024-03-20", provider: "Physical Therapy", amountCents: 7500 },
+    { _id: "exp1" as Id<"expenses">, datePaid: "2024-01-15", provider: "Dr. Smith", amountCents: 12500 },
+    { _id: "exp2" as Id<"expenses">, datePaid: "2024-01-15", provider: "Pharmacy Plus", amountCents: 4500 },
+    { _id: "exp3" as Id<"expenses">, datePaid: "2024-01-20", provider: "Hospital", amountCents: 50000 },
+    { _id: "exp4" as Id<"expenses">, datePaid: "2024-02-10", provider: "Dentist", amountCents: 20000 },
+    { _id: "exp5" as Id<"expenses">, datePaid: "2024-03-05", provider: "Eye Doctor", amountCents: 15000 },
+    { _id: "exp6" as Id<"expenses">, datePaid: "2024-03-20", provider: "Physical Therapy", amountCents: 7500 },
   ]
 
   it("matches by date when only one expense on that date", () => {
@@ -374,8 +375,8 @@ describe("matchPdfToExpense", () => {
 
   it("does not match when provider is too short (< 4 chars)", () => {
     const shortProviderExpenses = [
-      { _id: "exp1" as any, datePaid: "2024-01-15", provider: "Dr", amountCents: 1000 },
-      { _id: "exp2" as any, datePaid: "2024-01-15", provider: "CVS", amountCents: 2000 },
+      { _id: "exp1" as Id<"expenses">, datePaid: "2024-01-15", provider: "Dr", amountCents: 1000 },
+      { _id: "exp2" as Id<"expenses">, datePaid: "2024-01-15", provider: "CVS", amountCents: 2000 },
     ]
 
     const result = matchPdfToExpense("2024-01-15-dr-receipt.pdf", shortProviderExpenses)
