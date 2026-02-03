@@ -9,7 +9,10 @@
       "Bash(bun run dev:*)",
       "Bash(git add:*)",
       "Bash(bunx shadcn@latest add:*)",
-      "Bash(bunx convex:*)"
+      "Bash(bunx convex:*)",
+      "Bash(bun run lint)",
+      "Bash(bun run test:run:*)",
+      "Bash(git reset:*)"
     ]
   }
 }

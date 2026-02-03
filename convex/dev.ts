@@ -1,4 +1,5 @@
 import { internalMutation } from "./_generated/server"
+import { api } from "./_generated/api"
 
 // Clear all data - DEVELOPMENT ONLY
 // Run with: bunx convex run dev:clearAllData
@@ -33,5 +34,23 @@ export const clearAllData = internalMutation({
         expenses: expenses.length,
       },
     }
+  },
+})
+
+// Retry OCR on all failed documents
+// Run with: bunx convex run dev:retryFailedOcr
+export const retryFailedOcr = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const documents = await ctx.db.query("documents").collect()
+    const failed = documents.filter((d) => d.ocrStatus === "failed")
+
+    for (const doc of failed) {
+      await ctx.scheduler.runAfter(0, api.ocr.extractExpenseData, {
+        documentId: doc._id,
+      })
+    }
+
+    return { scheduled: failed.length }
   },
 })

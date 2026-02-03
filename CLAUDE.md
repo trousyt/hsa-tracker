@@ -23,7 +23,12 @@ bunx convex dev --once
 
 # Add new shadcn component
 bunx shadcn@latest add <component-name>
+
+# Verify changes (run after every code change)
+bun run lint && bun run test && bun run build
 ```
+
+**Important:** After every code change, run lint, test, and build to confirm changes work correctly.
 
 ## Project Architecture
 
