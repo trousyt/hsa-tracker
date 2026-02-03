@@ -735,7 +735,7 @@ export function ImportWizard({ onClose }: ImportWizardProps) {
   )
 
   return (
-    <Card className="max-w-3xl mx-auto">
+    <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
