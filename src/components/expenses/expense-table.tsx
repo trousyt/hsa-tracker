@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Download } from "lucide-react"
+import { Plus, Download, Upload } from "lucide-react"
 import { toast } from "sonner"
 
 import { Skeleton } from "@/components/ui/skeleton"
@@ -35,6 +35,7 @@ import { exportExpensesToCSV } from "@/lib/export"
 import { ExpenseDialog } from "./expense-dialog"
 import { DeleteExpenseDialog } from "./delete-expense-dialog"
 import { ExpenseDetail } from "./expense-detail"
+import { ImportWizard } from "../import/import-wizard"
 
 type Expense = Doc<"expenses">
 type StatusFilter = "all" | "unreimbursed" | "partial" | "reimbursed"
@@ -52,6 +53,7 @@ export function ExpenseTable() {
   const [editExpense, setEditExpense] = useState<Expense | null>(null)
   const [deleteExpense, setDeleteExpense] = useState<Expense | null>(null)
   const [viewExpenseId, setViewExpenseId] = useState<Id<"expenses"> | null>(null)
+  const [showImportWizard, setShowImportWizard] = useState(false)
 
   const columns = useMemo(
     () =>
@@ -131,6 +133,15 @@ export function ExpenseTable() {
     )
   }
 
+  // Show import wizard if active
+  if (showImportWizard) {
+    return (
+      <div className="space-y-4">
+        <ImportWizard onClose={() => setShowImportWizard(false)} />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -150,6 +161,10 @@ export function ExpenseTable() {
               <SelectItem value="reimbursed">Reimbursed</SelectItem>
             </SelectContent>
           </Select>
+          <Button variant="outline" onClick={() => setShowImportWizard(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Import
+          </Button>
           <Button variant="outline" onClick={handleExport}>
             <Download className="mr-2 h-4 w-4" />
             Export

@@ -54,6 +54,36 @@ export const create = mutation({
   },
 })
 
+// Create multiple expenses in a single transaction (for CSV import)
+export const createBatch = mutation({
+  args: {
+    expenses: v.array(
+      v.object({
+        datePaid: v.string(),
+        provider: v.string(),
+        amountCents: v.number(),
+        comment: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const ids = []
+    for (const expense of args.expenses) {
+      const id = await ctx.db.insert("expenses", {
+        datePaid: expense.datePaid,
+        provider: expense.provider,
+        amountCents: expense.amountCents,
+        comment: expense.comment,
+        documentIds: [],
+        totalReimbursedCents: 0,
+        status: "unreimbursed",
+      })
+      ids.push(id)
+    }
+    return ids
+  },
+})
+
 // Update an expense
 export const update = mutation({
   args: {
