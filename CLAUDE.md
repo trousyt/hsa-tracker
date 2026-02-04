@@ -27,7 +27,7 @@ bunx shadcn@latest add <component-name>
 # Verify changes (run after every code change)
 bun run lint && bun run test 
 
-# Verify feature changes (run only after lint, test and before commit)
+# Verify changes (run right before commit)
 bun run build
 ```
 
