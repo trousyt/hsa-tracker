@@ -64,8 +64,9 @@ http.route({
     }
 
     // Extract user ID from identity subject
-    // Convex Auth sets subject to the user's document ID directly
-    const userId = identity.subject
+    // Convex Auth format: "userId|sessionId" - we need just the userId part
+    // This matches what getAuthUserId() does internally
+    const userId = identity.subject.split("|")[0]
 
     // Fetch document and verify ownership
     const document = await ctx.runQuery(internal.fileAccess.getDocumentForAccess, {
