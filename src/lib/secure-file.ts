@@ -2,8 +2,11 @@ import { useAuthToken } from "@convex-dev/auth/react"
 import { useCallback, useEffect, useState } from "react"
 
 /**
- * Get the base URL for the Convex HTTP API (site URL).
- * This is where HTTP actions are served from.
+ * Derives the Convex site URL from the VITE_CONVEX_URL environment variable.
+ *
+ * Replaces the ".convex.cloud" domain suffix with ".convex.site".
+ *
+ * @returns The Convex site URL (VITE_CONVEX_URL with ".convex.cloud" replaced by ".convex.site")
  */
 function getConvexSiteUrl(): string {
   // VITE_CONVEX_URL is like https://xxx.convex.cloud
@@ -13,8 +16,10 @@ function getConvexSiteUrl(): string {
 }
 
 /**
- * Construct the secure file URL for a document.
- * Files are served via authenticated HTTP action, not direct storage URLs.
+ * Build the site-scoped API endpoint URL used to fetch a secure file for a document.
+ *
+ * @param documentId - The Convex document identifier for the file
+ * @returns The full URL to the secure file endpoint for `documentId`
  */
 export function getSecureFileUrl(documentId: string): string {
   const siteUrl = getConvexSiteUrl()
@@ -22,8 +27,16 @@ export function getSecureFileUrl(documentId: string): string {
 }
 
 /**
- * Fetch a file securely with authentication.
- * Returns a blob URL that can be used in img src, iframe src, etc.
+ * Fetches a protected file using a Bearer token and exposes it as a blob URL.
+ *
+ * @param documentId - The identifier of the remote document to fetch.
+ * @param authToken - The Bearer authentication token; must be non-null.
+ * @returns A blob URL referencing the fetched file, suitable for use as an element `src` or for downloading.
+ * @throws `Not authenticated` if `authToken` is null or undefined.
+ * @throws `Authentication required` if the server responds with HTTP 401.
+ * @throws `Access denied` if the server responds with HTTP 403.
+ * @throws `File not found` if the server responds with HTTP 404.
+ * @throws `Failed to fetch file: {status}` for other non-OK HTTP responses.
  */
 export async function fetchSecureFile(
   documentId: string,
@@ -60,8 +73,13 @@ export async function fetchSecureFile(
 }
 
 /**
- * Hook to fetch a secure file and manage its blob URL lifecycle.
- * Automatically revokes the blob URL on cleanup.
+ * Fetches a secure file for a given document ID and manages its Blob URL lifecycle.
+ *
+ * @param documentId - The document ID to fetch; pass `null` to clear any loaded URL.
+ * @returns An object with:
+ *  - `blobUrl`: the Blob URL for the fetched file, or `null` if none is loaded.
+ *  - `loading`: `true` while the file is being fetched, `false` otherwise.
+ *  - `error`: an `Error` if the fetch failed, or `null` on success.
  */
 export function useSecureFile(documentId: string | null) {
   const authToken = useAuthToken()
@@ -118,8 +136,12 @@ export function useSecureFile(documentId: string | null) {
 }
 
 /**
- * Hook to get the auth token for manual file fetching.
- * Use this when you need more control over the fetch process.
+ * Provides helpers for obtaining and downloading secure file blob URLs using the current auth token.
+ *
+ * @returns An object with:
+ * - `getFileUrl(documentId)`: asynchronously returns a blob URL string for the specified document.
+ * - `downloadFile(documentId, filename)`: asynchronously fetches the document and triggers a download using `filename`.
+ * - `authToken`: the current authentication token (or `null` if not authenticated).
  */
 export function useSecureFileUrl() {
   const authToken = useAuthToken()

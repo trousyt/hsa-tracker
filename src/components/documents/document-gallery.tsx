@@ -25,6 +25,16 @@ interface DocumentGalleryProps {
   documentIds: Id<"documents">[]
 }
 
+/**
+ * Render a gallery of documents attached to a specific expense, including secure viewing and deletion controls.
+ *
+ * Fetches the documents by `documentIds`, shows a loading skeleton while fetching, displays an empty state if none,
+ * and provides per-document actions: open in a secure viewer and remove the document from the expense with confirmation.
+ *
+ * @param expenseId - The Id of the expense the documents are associated with.
+ * @param documentIds - Array of document Ids to fetch and display in the gallery.
+ * @returns A React element containing the document grid, a secure DocumentViewer dialog, and a delete confirmation dialog.
+ */
 export function DocumentGallery({
   expenseId,
   documentIds,
