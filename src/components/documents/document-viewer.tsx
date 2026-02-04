@@ -1,10 +1,13 @@
+import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { FileText, Download, ExternalLink } from "lucide-react"
+import { FileText, Download, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useSecureFileUrl } from "@/lib/secure-file"
+import type { Id } from "../../../convex/_generated/dataModel"
 
 interface DocumentViewerProps {
   document: {
-    url: string
+    id: Id<"documents">
     filename: string
     mimeType: string
   } | null
@@ -12,10 +15,65 @@ interface DocumentViewerProps {
 }
 
 export function DocumentViewer({ document, onClose }: DocumentViewerProps) {
+  const { getFileUrl, downloadFile } = useSecureFileUrl()
+  const [blobUrl, setBlobUrl] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch file securely when document changes
+  useEffect(() => {
+    if (!document) {
+      setBlobUrl(null)
+      setError(null)
+      return
+    }
+
+    let cancelled = false
+    let url: string | null = null
+
+    const fetchFile = async () => {
+      setLoading(true)
+      setError(null)
+
+      try {
+        url = await getFileUrl(document.id)
+        if (!cancelled) {
+          setBlobUrl(url)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load file")
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchFile()
+
+    // Cleanup: revoke blob URL when component unmounts or document changes
+    return () => {
+      cancelled = true
+      if (url) {
+        URL.revokeObjectURL(url)
+      }
+    }
+  }, [document, getFileUrl])
+
   if (!document) return null
 
   const isImage = document.mimeType.startsWith("image/")
   const isPdf = document.mimeType === "application/pdf"
+
+  const handleDownload = async () => {
+    try {
+      await downloadFile(document.id, document.filename)
+    } catch (err) {
+      console.error("Download failed:", err)
+    }
+  }
 
   return (
     <Dialog open={!!document} onOpenChange={(open) => !open && onClose()}>
@@ -28,20 +86,11 @@ export function DocumentViewer({ document, onClose }: DocumentViewerProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.open(document.url, "_blank")}
+              onClick={handleDownload}
+              disabled={loading}
             >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Open
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              asChild
-            >
-              <a href={document.url} download={document.filename}>
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </a>
+              <Download className="h-4 w-4 mr-2" />
+              Download
             </Button>
           </div>
           <h3 className="font-medium truncate flex-1">{document.filename}</h3>
@@ -49,34 +98,68 @@ export function DocumentViewer({ document, onClose }: DocumentViewerProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-auto p-4 bg-muted/30 min-h-[400px] max-h-[calc(90vh-80px)]">
-          {isImage && (
-            <img
-              src={document.url}
-              alt={document.filename}
-              className="max-w-full h-auto mx-auto rounded"
-            />
-          )}
-          {isPdf && (
-            <iframe
-              src={document.url}
-              title={document.filename}
-              className="w-full h-[70vh] rounded border"
-            />
-          )}
-          {!isImage && !isPdf && (
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
-                Preview not available for this file type.
+          {loading && (
+            <div className="flex flex-col items-center justify-center h-full">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mt-2">
+                Loading document...
               </p>
+            </div>
+          )}
+
+          {error && (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+              <p className="text-destructive font-medium">
+                Failed to load document
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">{error}</p>
               <Button
                 variant="outline"
                 className="mt-4"
-                onClick={() => window.open(document.url, "_blank")}
+                onClick={() => {
+                  // Retry by triggering effect again
+                  setBlobUrl(null)
+                  setError(null)
+                }}
               >
-                Open file
+                Retry
               </Button>
             </div>
+          )}
+
+          {!loading && !error && blobUrl && (
+            <>
+              {isImage && (
+                <img
+                  src={blobUrl}
+                  alt={document.filename}
+                  className="max-w-full h-auto mx-auto rounded"
+                />
+              )}
+              {isPdf && (
+                <iframe
+                  src={blobUrl}
+                  title={document.filename}
+                  className="w-full h-[70vh] rounded border"
+                />
+              )}
+              {!isImage && !isPdf && (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">
+                    Preview not available for this file type.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="mt-4"
+                    onClick={handleDownload}
+                  >
+                    Download file
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </DialogContent>

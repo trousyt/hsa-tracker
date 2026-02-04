@@ -4,15 +4,17 @@
       "WebSearch",
       "Bash(code:*)",
       "Bash(git symbolic-ref:*)",
+      "Bash(git checkout:*)",
       "Bash(bun install:*)",
+      "Bash(bun add:*)",
       "Bash(bun run build:*)",
       "Bash(bun run dev:*)",
-      "Bash(git add:*)",
-      "Bash(bunx shadcn@latest add:*)",
-      "Bash(bunx convex:*)",
       "Bash(bun run lint)",
-      "Bash(bun run test:run:*)",
-      "Bash(git reset:*)"
+      "Bash(bun run test:*)",
+      "Bash(git add:*)",
+      "Bash(git reset:*)",
+      "Bash(bunx shadcn@latest add:*)",
+      "Bash(bunx convex:*)"
     ]
   }
 }
