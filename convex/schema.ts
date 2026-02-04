@@ -1,8 +1,22 @@
 import { defineSchema, defineTable } from "convex/server"
 import { v } from "convex/values"
+import { authTables } from "@convex-dev/auth/server"
 
 export default defineSchema({
+  ...authTables,
+
+  // Override users table to add isOwner and githubId fields
+  users: defineTable({
+    name: v.optional(v.string()),
+    email: v.optional(v.string()),
+    emailVerificationTime: v.optional(v.number()),
+    image: v.optional(v.string()),
+    isOwner: v.optional(v.boolean()),
+    githubId: v.optional(v.string()),
+  }).index("email", ["email"]),
+
   expenses: defineTable({
+    userId: v.optional(v.string()), // Optional during migration period
     datePaid: v.string(), // ISO date (YYYY-MM-DD)
     provider: v.string(), // Provider/vendor name
     amountCents: v.number(), // Amount in cents (integer)
@@ -17,6 +31,7 @@ export default defineSchema({
     ),
     ocrAcknowledged: v.optional(v.boolean()), // True if user has applied or disregarded OCR data
   })
+    .index("by_user", ["userId"])
     .index("by_status", ["status"])
     .index("by_date", ["datePaid"])
     .index("by_status_and_date", ["status", "datePaid"])
@@ -24,6 +39,7 @@ export default defineSchema({
     .index("by_category_and_date", ["category", "datePaid"]),
 
   documents: defineTable({
+    userId: v.optional(v.string()), // Optional during migration period
     storageId: v.id("_storage"),
     originalFilename: v.string(),
     mimeType: v.string(),
@@ -58,14 +74,17 @@ export default defineSchema({
       })
     ),
     ocrError: v.optional(v.string()),
-  }),
+  }).index("by_user", ["userId"]),
 
   reimbursements: defineTable({
+    userId: v.optional(v.string()), // Optional during migration period
     expenseId: v.id("expenses"),
     amountCents: v.number(),
     date: v.string(), // ISO date
     notes: v.optional(v.string()),
-  }).index("by_expense", ["expenseId"]),
+  })
+    .index("by_user", ["userId"])
+    .index("by_expense", ["expenseId"]),
 
   ocrUsage: defineTable({
     yearMonth: v.string(), // "YYYY-MM" format
