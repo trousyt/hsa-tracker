@@ -19,6 +19,7 @@ export function DocumentViewer({ document, onClose }: DocumentViewerProps) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   // Fetch file securely when document changes
   useEffect(() => {
@@ -36,9 +37,14 @@ export function DocumentViewer({ document, onClose }: DocumentViewerProps) {
       setError(null)
 
       try {
-        url = await getFileUrl(document.id)
-        if (!cancelled) {
-          setBlobUrl(url)
+        const fetchedUrl = await getFileUrl(document.id)
+        // Always track the URL for cleanup, even if cancelled
+        url = fetchedUrl
+        if (cancelled) {
+          // Component unmounted while fetching - revoke immediately
+          URL.revokeObjectURL(fetchedUrl)
+        } else {
+          setBlobUrl(fetchedUrl)
         }
       } catch (err) {
         if (!cancelled) {
@@ -60,7 +66,7 @@ export function DocumentViewer({ document, onClose }: DocumentViewerProps) {
         URL.revokeObjectURL(url)
       }
     }
-  }, [document, getFileUrl])
+  }, [document, getFileUrl, retryCount])
 
   if (!document) return null
 
@@ -117,11 +123,7 @@ export function DocumentViewer({ document, onClose }: DocumentViewerProps) {
               <Button
                 variant="outline"
                 className="mt-4"
-                onClick={() => {
-                  // Retry by triggering effect again
-                  setBlobUrl(null)
-                  setError(null)
-                }}
+                onClick={() => setRetryCount((c) => c + 1)}
               >
                 Retry
               </Button>

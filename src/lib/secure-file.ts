@@ -83,9 +83,14 @@ export function useSecureFile(documentId: string | null) {
       setError(null)
 
       try {
-        url = await fetchSecureFile(documentId, authToken)
-        if (!cancelled) {
-          setBlobUrl(url)
+        const fetchedUrl = await fetchSecureFile(documentId, authToken)
+        // Always track the URL for cleanup, even if cancelled
+        url = fetchedUrl
+        if (cancelled) {
+          // Component unmounted while fetching - revoke immediately
+          URL.revokeObjectURL(fetchedUrl)
+        } else {
+          setBlobUrl(fetchedUrl)
         }
       } catch (err) {
         if (!cancelled) {
