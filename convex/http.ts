@@ -6,13 +6,21 @@ import { Id } from "./_generated/dataModel"
 
 const http = httpRouter()
 
+// CORS headers for cross-origin requests (frontend on localhost, API on convex.site)
+const corsHeaders = {
+  "Access-Control-Allow-Origin": process.env.SITE_URL ?? "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Authorization, Content-Type",
+}
+
 // Add Convex Auth routes
 auth.addHttpRoutes(http)
 
 // Secure file serving endpoint
 // Authenticates every request and logs access for audit compliance
+// Note: Convex HTTP router uses pathPrefix for dynamic segments, not path parameters
 http.route({
-  path: "/api/files/{documentId}",
+  pathPrefix: "/api/files/",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
     const url = new URL(request.url)
@@ -38,6 +46,7 @@ http.route({
       return new Response("Unauthorized", {
         status: 401,
         headers: {
+          ...corsHeaders,
           "Content-Type": "text/plain",
           "WWW-Authenticate": "Bearer",
         },
@@ -66,7 +75,7 @@ http.route({
 
       return new Response("Forbidden", {
         status: 403,
-        headers: { "Content-Type": "text/plain" },
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
       })
     }
 
@@ -85,7 +94,7 @@ http.route({
 
       return new Response("File not found", {
         status: 404,
-        headers: { "Content-Type": "text/plain" },
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
       })
     }
 
@@ -102,6 +111,7 @@ http.route({
     return new Response(blob, {
       status: 200,
       headers: {
+        ...corsHeaders,
         "Content-Type": document.mimeType,
         "Content-Disposition": `inline; filename="${encodeURIComponent(document.originalFilename)}"`,
         "Content-Length": document.sizeBytes.toString(),
@@ -116,15 +126,13 @@ http.route({
 
 // CORS preflight for secure file endpoint
 http.route({
-  path: "/api/files/{documentId}",
+  pathPrefix: "/api/files/",
   method: "OPTIONS",
   handler: httpAction(async () => {
     return new Response(null, {
       status: 204,
       headers: {
-        "Access-Control-Allow-Origin": process.env.SITE_URL ?? "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Authorization, Content-Type",
+        ...corsHeaders,
         "Access-Control-Max-Age": "86400",
       },
     })
