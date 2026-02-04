@@ -15,6 +15,13 @@ interface DocumentViewerProps {
   onClose: () => void
 }
 
+/**
+ * Render a modal dialog to preview and download a secure document.
+ *
+ * Fetches a time-limited secure URL for the provided document and displays an inline preview for images and PDFs. Shows loading and error states, provides a retry action and a download action, and revokes any created object URLs when the viewer is closed or a different document is loaded.
+ *
+ * @returns The document viewer modal as JSX, or `null` when `document` is not provided.
+ */
 export function DocumentViewer({ document, onClose }: DocumentViewerProps) {
   const { getFileUrl, downloadFile } = useSecureFileUrl()
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
