@@ -40,6 +40,7 @@ export const save = mutation({
 })
 
 // Get a document by ID
+// Note: Does NOT return storage URL - use secure HTTP endpoint /api/files/{documentId}
 export const get = query({
   args: { id: v.id("documents") },
   handler: async (ctx, args) => {
@@ -49,12 +50,12 @@ export const get = query({
     const document = await ctx.db.get(args.id)
     if (!document || document.userId !== userId) return null
 
-    const url = await ctx.storage.getUrl(document.storageId)
-    return { ...document, url }
+    return document
   },
 })
 
 // Get multiple documents by IDs
+// Note: Does NOT return storage URLs - use secure HTTP endpoint /api/files/{documentId}
 export const getMany = query({
   args: { ids: v.array(v.id("documents")) },
   handler: async (ctx, args) => {
@@ -65,8 +66,7 @@ export const getMany = query({
       args.ids.map(async (id) => {
         const doc = await ctx.db.get(id)
         if (!doc || doc.userId !== userId) return null
-        const url = await ctx.storage.getUrl(doc.storageId)
-        return { ...doc, url }
+        return doc
       })
     )
     return documents.filter((doc) => doc !== null)

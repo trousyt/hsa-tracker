@@ -91,4 +91,18 @@ export default defineSchema({
     pagesProcessed: v.number(),
     lastUpdated: v.number(), // timestamp
   }).index("by_year_month", ["yearMonth"]),
+
+  // Audit log for file access (security compliance)
+  fileAccessLogs: defineTable({
+    userId: v.string(),
+    documentId: v.id("documents"),
+    action: v.union(v.literal("view"), v.literal("download")),
+    timestamp: v.number(),
+    userAgent: v.optional(v.string()),
+    success: v.boolean(),
+    errorReason: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_document", ["documentId"])
+    .index("by_timestamp", ["timestamp"]),
 })

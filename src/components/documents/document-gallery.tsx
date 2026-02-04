@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useQuery, useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import type { Id } from "../../../convex/_generated/dataModel"
-import { FileText, Trash2, ExternalLink } from "lucide-react"
+import { FileText, Trash2, Image, FileSpreadsheet } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -25,6 +25,16 @@ interface DocumentGalleryProps {
   documentIds: Id<"documents">[]
 }
 
+/**
+ * Render a gallery of documents attached to a specific expense, including secure viewing and deletion controls.
+ *
+ * Fetches the documents by `documentIds`, shows a loading skeleton while fetching, displays an empty state if none,
+ * and provides per-document actions: open in a secure viewer and remove the document from the expense with confirmation.
+ *
+ * @param expenseId - The Id of the expense the documents are associated with.
+ * @param documentIds - Array of document Ids to fetch and display in the gallery.
+ * @returns A React element containing the document grid, a secure DocumentViewer dialog, and a delete confirmation dialog.
+ */
 export function DocumentGallery({
   expenseId,
   documentIds,
@@ -32,8 +42,9 @@ export function DocumentGallery({
   const documents = useQuery(api.documents.getMany, { ids: documentIds })
   const removeFromExpense = useMutation(api.documents.removeFromExpense)
 
+  // Store document ID for viewing (secure fetch happens in viewer)
   const [viewingDocument, setViewingDocument] = useState<{
-    url: string
+    id: Id<"documents">
     filename: string
     mimeType: string
   } | null>(null)
@@ -86,39 +97,43 @@ export function DocumentGallery({
     }
   }
 
+  // Get icon based on mime type
+  const getFileIcon = (mimeType: string) => {
+    if (mimeType.startsWith("image/")) {
+      return <Image className="h-12 w-12 text-muted-foreground" />
+    }
+    if (mimeType === "application/pdf") {
+      return <FileText className="h-12 w-12 text-muted-foreground" />
+    }
+    if (mimeType.includes("spreadsheet") || mimeType.includes("excel")) {
+      return <FileSpreadsheet className="h-12 w-12 text-muted-foreground" />
+    }
+    return <FileText className="h-12 w-12 text-muted-foreground" />
+  }
+
   return (
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {documents.map((doc) => {
           if (!doc) return null
 
-          const isImage = doc.mimeType.startsWith("image/")
-
           return (
             <div
               key={doc._id}
               className="group relative border rounded-lg overflow-hidden bg-muted/30"
             >
-              {/* Thumbnail / Preview */}
+              {/* Thumbnail placeholder - click to view securely */}
               <button
                 onClick={() =>
                   setViewingDocument({
-                    url: doc.url!,
+                    id: doc._id,
                     filename: doc.originalFilename,
                     mimeType: doc.mimeType,
                   })
                 }
                 className="w-full aspect-[4/3] flex items-center justify-center hover:bg-muted/50 transition-colors"
               >
-                {isImage && doc.url ? (
-                  <img
-                    src={doc.url}
-                    alt={doc.originalFilename}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <FileText className="h-12 w-12 text-muted-foreground" />
-                )}
+                {getFileIcon(doc.mimeType)}
               </button>
 
               {/* File info */}
@@ -136,17 +151,6 @@ export function DocumentGallery({
 
               {/* Hover actions */}
               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                {doc.url && (
-                  <Button
-                    size="icon"
-                    variant="secondary"
-                    className="h-7 w-7"
-                    onClick={() => window.open(doc.url!, "_blank")}
-                    title="Open in new tab"
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                  </Button>
-                )}
                 <Button
                   size="icon"
                   variant="destructive"
@@ -162,7 +166,7 @@ export function DocumentGallery({
         })}
       </div>
 
-      {/* Document Viewer Dialog */}
+      {/* Document Viewer Dialog - fetches file securely */}
       <DocumentViewer
         document={viewingDocument}
         onClose={() => setViewingDocument(null)}
