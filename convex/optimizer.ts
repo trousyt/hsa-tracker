@@ -1,5 +1,6 @@
 import { v } from "convex/values"
 import { query, mutation } from "./_generated/server"
+import { requireAuth, getOptionalAuth } from "./lib/auth"
 
 /**
  * Reimbursement Optimizer using Dynamic Programming
@@ -21,6 +22,17 @@ export const findOptimal = query({
     targetCents: v.number(),
   },
   handler: async (ctx, args) => {
+    const userId = await getOptionalAuth(ctx)
+    if (!userId) {
+      return {
+        success: false,
+        message: "Not authenticated",
+        expenses: [],
+        totalCents: 0,
+        exactMatch: false,
+      }
+    }
+
     if (args.targetCents <= 0) {
       return {
         success: false,
@@ -31,12 +43,14 @@ export const findOptimal = query({
       }
     }
 
-    // Get all unreimbursed and partial expenses, sorted by date (oldest first for FIFO)
+    // Get all unreimbursed and partial expenses for this user, sorted by date (oldest first for FIFO)
     const expenses = await ctx.db
       .query("expenses")
-      .withIndex("by_date")
-      .order("asc")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect()
+
+    // Sort by date (oldest first)
+    expenses.sort((a, b) => a.datePaid.localeCompare(b.datePaid))
 
     // Filter to only unreimbursed/partial and get their remaining amounts
     const eligibleExpenses = expenses
@@ -165,17 +179,19 @@ export const applyOptimization = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx)
     const date = args.date || new Date().toISOString().split("T")[0]
 
     for (const expenseId of args.expenseIds) {
       const expense = await ctx.db.get(expenseId)
-      if (!expense) continue
+      if (!expense || expense.userId !== userId) continue
 
       const remainingCents = expense.amountCents - expense.totalReimbursedCents
       if (remainingCents <= 0) continue
 
       // Create reimbursement record
       await ctx.db.insert("reimbursements", {
+        userId,
         expenseId,
         amountCents: remainingCents,
         date,

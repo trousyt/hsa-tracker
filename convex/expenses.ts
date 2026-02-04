@@ -1,5 +1,6 @@
 import { v } from "convex/values"
 import { mutation, query } from "./_generated/server"
+import { requireAuth, getOptionalAuth } from "./lib/auth"
 
 // List all expenses, sorted by date descending
 export const list = query({
@@ -14,20 +15,21 @@ export const list = query({
     category: v.optional(v.union(v.string(), v.literal("uncategorized"))),
   },
   handler: async (ctx, args) => {
-    // Start with base query
-    let expenses
+    const userId = await getOptionalAuth(ctx)
+    if (!userId) return []
 
+    // Start with user-scoped query
+    let expenses = await ctx.db
+      .query("expenses")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect()
+
+    // Apply status filter
     if (args.status) {
-      expenses = await ctx.db
-        .query("expenses")
-        .withIndex("by_status_and_date", (q) => q.eq("status", args.status!))
-        .order("desc")
-        .collect()
-    } else {
-      expenses = await ctx.db.query("expenses").order("desc").collect()
+      expenses = expenses.filter((e) => e.status === args.status)
     }
 
-    // Apply category filter client-side (since we can't combine indexes easily)
+    // Apply category filter
     if (args.category) {
       if (args.category === "uncategorized") {
         expenses = expenses.filter((e) => !e.category)
@@ -35,6 +37,9 @@ export const list = query({
         expenses = expenses.filter((e) => e.category === args.category)
       }
     }
+
+    // Sort by date descending
+    expenses.sort((a, b) => b.datePaid.localeCompare(a.datePaid))
 
     return expenses
   },
@@ -44,7 +49,13 @@ export const list = query({
 export const get = query({
   args: { id: v.id("expenses") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id)
+    const userId = await getOptionalAuth(ctx)
+    if (!userId) return null
+
+    const expense = await ctx.db.get(args.id)
+    if (!expense || expense.userId !== userId) return null
+
+    return expense
   },
 })
 
@@ -58,7 +69,10 @@ export const create = mutation({
     category: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx)
+
     const expenseId = await ctx.db.insert("expenses", {
+      userId,
       datePaid: args.datePaid,
       provider: args.provider,
       amountCents: args.amountCents,
@@ -86,9 +100,12 @@ export const createBatch = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx)
+
     const ids = []
     for (const expense of args.expenses) {
       const id = await ctx.db.insert("expenses", {
+        userId,
         datePaid: expense.datePaid,
         provider: expense.provider,
         amountCents: expense.amountCents,
@@ -115,7 +132,14 @@ export const update = mutation({
     category: v.optional(v.union(v.string(), v.null())), // Allow null to clear category
   },
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx)
     const { id, ...updates } = args
+
+    // Verify ownership
+    const expense = await ctx.db.get(id)
+    if (!expense || expense.userId !== userId) {
+      throw new Error("Expense not found")
+    }
 
     // Filter out undefined values
     const filteredUpdates: Record<string, unknown> = {}
@@ -137,6 +161,14 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id("expenses") },
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx)
+
+    // Verify ownership
+    const expense = await ctx.db.get(args.id)
+    if (!expense || expense.userId !== userId) {
+      throw new Error("Expense not found")
+    }
+
     // First delete associated reimbursements
     const reimbursements = await ctx.db
       .query("reimbursements")
@@ -156,6 +188,14 @@ export const remove = mutation({
 export const acknowledgeOcr = mutation({
   args: { id: v.id("expenses") },
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx)
+
+    // Verify ownership
+    const expense = await ctx.db.get(args.id)
+    if (!expense || expense.userId !== userId) {
+      throw new Error("Expense not found")
+    }
+
     await ctx.db.patch(args.id, { ocrAcknowledged: true })
   },
 })
@@ -173,13 +213,19 @@ export const listWithOcrStatus = query({
     category: v.optional(v.union(v.string(), v.literal("uncategorized"))),
   },
   handler: async (ctx, args) => {
-    let expenses = args.status
-      ? await ctx.db
-          .query("expenses")
-          .withIndex("by_status_and_date", (q) => q.eq("status", args.status!))
-          .order("desc")
-          .collect()
-      : await ctx.db.query("expenses").order("desc").collect()
+    const userId = await getOptionalAuth(ctx)
+    if (!userId) return []
+
+    // Start with user-scoped query
+    let expenses = await ctx.db
+      .query("expenses")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect()
+
+    // Apply status filter
+    if (args.status) {
+      expenses = expenses.filter((e) => e.status === args.status)
+    }
 
     // Apply category filter
     if (args.category) {
@@ -189,6 +235,9 @@ export const listWithOcrStatus = query({
         expenses = expenses.filter((e) => e.category === args.category)
       }
     }
+
+    // Sort by date descending
+    expenses.sort((a, b) => b.datePaid.localeCompare(a.datePaid))
 
     return Promise.all(
       expenses.map(async (expense) => {
@@ -217,7 +266,23 @@ export const listWithOcrStatus = query({
 export const getSummary = query({
   args: {},
   handler: async (ctx) => {
-    const expenses = await ctx.db.query("expenses").collect()
+    const userId = await getOptionalAuth(ctx)
+    if (!userId) {
+      return {
+        totalAmountCents: 0,
+        totalReimbursedCents: 0,
+        totalUnreimbursedCents: 0,
+        expenseCount: 0,
+        unreimbursedCount: 0,
+        partialCount: 0,
+        reimbursedCount: 0,
+      }
+    }
+
+    const expenses = await ctx.db
+      .query("expenses")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect()
 
     let totalAmountCents = 0
     let totalReimbursedCents = 0

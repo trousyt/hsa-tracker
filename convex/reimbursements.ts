@@ -1,5 +1,6 @@
 import { v } from "convex/values"
 import { mutation, query } from "./_generated/server"
+import { requireAuth, getOptionalAuth } from "./lib/auth"
 
 export const record = mutation({
   args: {
@@ -9,8 +10,10 @@ export const record = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx)
+
     const expense = await ctx.db.get(args.expenseId)
-    if (!expense) {
+    if (!expense || expense.userId !== userId) {
       throw new Error("Expense not found")
     }
 
@@ -29,6 +32,7 @@ export const record = mutation({
 
     // Create the reimbursement record
     const reimbursementId = await ctx.db.insert("reimbursements", {
+      userId,
       expenseId: args.expenseId,
       amountCents: args.amountCents,
       date,
@@ -60,8 +64,10 @@ export const recordFull = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx)
+
     const expense = await ctx.db.get(args.expenseId)
-    if (!expense) {
+    if (!expense || expense.userId !== userId) {
       throw new Error("Expense not found")
     }
 
@@ -74,6 +80,7 @@ export const recordFull = mutation({
 
     // Create the reimbursement record for the remaining amount
     const reimbursementId = await ctx.db.insert("reimbursements", {
+      userId,
       expenseId: args.expenseId,
       amountCents: remainingCents,
       date,
@@ -95,13 +102,15 @@ export const undo = mutation({
     reimbursementId: v.id("reimbursements"),
   },
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx)
+
     const reimbursement = await ctx.db.get(args.reimbursementId)
-    if (!reimbursement) {
+    if (!reimbursement || reimbursement.userId !== userId) {
       throw new Error("Reimbursement not found")
     }
 
     const expense = await ctx.db.get(reimbursement.expenseId)
-    if (!expense) {
+    if (!expense || expense.userId !== userId) {
       throw new Error("Associated expense not found")
     }
 
@@ -130,6 +139,15 @@ export const getByExpense = query({
     expenseId: v.id("expenses"),
   },
   handler: async (ctx, args) => {
+    const userId = await getOptionalAuth(ctx)
+    if (!userId) return []
+
+    // Verify ownership of the expense first
+    const expense = await ctx.db.get(args.expenseId)
+    if (!expense || expense.userId !== userId) {
+      return []
+    }
+
     const reimbursements = await ctx.db
       .query("reimbursements")
       .withIndex("by_expense", (q) => q.eq("expenseId", args.expenseId))
