@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { FileText, Download, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSecureFileUrl } from "@/lib/secure-file"
+import { toast } from "sonner"
 import type { Id } from "../../../convex/_generated/dataModel"
 
 interface DocumentViewerProps {
@@ -76,8 +77,9 @@ export function DocumentViewer({ document, onClose }: DocumentViewerProps) {
   const handleDownload = async () => {
     try {
       await downloadFile(document.id, document.filename)
+      toast.success("Download started")
     } catch (err) {
-      console.error("Download failed:", err)
+      toast.error(err instanceof Error ? err.message : "Download failed")
     }
   }
 

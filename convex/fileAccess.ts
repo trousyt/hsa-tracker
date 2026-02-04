@@ -2,6 +2,19 @@ import { v } from "convex/values"
 import { internalMutation, internalQuery } from "./_generated/server"
 
 /**
+ * Internal query to validate a document ID string.
+ * Returns the normalized ID if valid, null otherwise.
+ */
+export const validateDocumentId = internalQuery({
+  args: {
+    idString: v.string(),
+  },
+  handler: async (ctx, { idString }) => {
+    return ctx.db.normalizeId("documents", idString)
+  },
+})
+
+/**
  * Internal query to get a document for file access.
  * Verifies ownership before returning document data.
  */

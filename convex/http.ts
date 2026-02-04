@@ -2,7 +2,6 @@ import { httpRouter } from "convex/server"
 import { httpAction } from "./_generated/server"
 import { auth } from "./auth"
 import { internal } from "./_generated/api"
-import { Id } from "./_generated/dataModel"
 
 const http = httpRouter()
 
@@ -25,10 +24,21 @@ http.route({
   handler: httpAction(async (ctx, request) => {
     const url = new URL(request.url)
     const pathParts = url.pathname.split("/")
-    const documentId = pathParts[pathParts.length - 1] as Id<"documents">
+    const idString = pathParts[pathParts.length - 1]
 
     // Get user agent for audit logging
     const userAgent = request.headers.get("user-agent") ?? undefined
+
+    // Validate the document ID format via internal query
+    const documentId = await ctx.runQuery(internal.fileAccess.validateDocumentId, {
+      idString,
+    })
+    if (!documentId) {
+      return new Response("Invalid document ID", {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      })
+    }
 
     // Check authentication via JWT in Authorization header
     const identity = await ctx.auth.getUserIdentity()

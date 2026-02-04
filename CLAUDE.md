@@ -25,7 +25,10 @@ bunx convex dev --once
 bunx shadcn@latest add <component-name>
 
 # Verify changes (run after every code change)
-bun run lint && bun run test && bun run build
+bun run lint && bun run test 
+
+# Verify feature changes (run only after lint, test and before commit)
+bun run build
 ```
 
 **Important:** After every code change, run lint, test, and build to confirm changes work correctly.

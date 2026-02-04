@@ -12,6 +12,7 @@ import type * as auth from "../auth.js";
 import type * as dev from "../dev.js";
 import type * as documents from "../documents.js";
 import type * as expenses from "../expenses.js";
+import type * as fileAccess from "../fileAccess.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as ocr from "../ocr.js";
@@ -29,6 +30,7 @@ declare const fullApi: ApiFromModules<{
   dev: typeof dev;
   documents: typeof documents;
   expenses: typeof expenses;
+  fileAccess: typeof fileAccess;
   http: typeof http;
   "lib/auth": typeof lib_auth;
   ocr: typeof ocr;
