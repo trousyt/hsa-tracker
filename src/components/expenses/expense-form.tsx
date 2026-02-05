@@ -30,7 +30,7 @@ import {
 import { cn } from "@/lib/utils"
 import { expenseSchema, type ExpenseFormData } from "@/lib/validations/expense"
 import { EXPENSE_CATEGORIES } from "@/lib/constants/expense-categories"
-import { formatCurrency } from "@/lib/currency"
+import { formatDollars } from "@/lib/currency"
 
 /** Fields that support OCR comparison */
 type OcrFieldKey = "amount" | "datePaid" | "provider"
@@ -338,7 +338,7 @@ export function ExpenseForm({
                       <>
                         Was:{" "}
                         <span className="font-medium">
-                          {formatCurrency(originalValues.amount)}
+                          {formatDollars(originalValues.amount)}
                         </span>
                       </>
                     ) : (
@@ -346,7 +346,7 @@ export function ExpenseForm({
                         OCR found:{" "}
                         <span className="font-medium">
                           {ocrValues.amount !== undefined &&
-                            formatCurrency(ocrValues.amount)}
+                            formatDollars(ocrValues.amount)}
                         </span>
                       </>
                     )}

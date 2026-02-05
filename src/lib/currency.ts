@@ -28,6 +28,17 @@ export function formatCurrency(cents: number): string {
 }
 
 /**
+ * Format dollars as a currency string (e.g., "$25.50")
+ * Use when you already have a dollar amount (not cents)
+ */
+export function formatDollars(dollars: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(dollars)
+}
+
+/**
  * Parse a currency input string to cents
  * Handles formats like: "25.50", "$25.50", "25", "25.5"
  */
