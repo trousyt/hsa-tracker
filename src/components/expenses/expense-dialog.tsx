@@ -38,6 +38,7 @@ interface ExpenseDialogProps {
     provider: string
     amountCents: number
     comment?: string
+    category?: string | null
   }
   ocrData?: OcrExtractedData
 }
@@ -206,6 +207,7 @@ export function ExpenseDialog({
           provider: data.provider,
           amountCents: dollarsToCents(data.amount),
           comment: data.comment || undefined,
+          category: data.category ?? null,
         })
         // Mark OCR as acknowledged when applying data via "Apply Data" button
         if (ocrData) {
@@ -218,6 +220,7 @@ export function ExpenseDialog({
           provider: data.provider,
           amountCents: dollarsToCents(data.amount),
           comment: data.comment || undefined,
+          category: data.category ?? null,
         })
         // Attach uploaded document to the new expense
         if (uploadedDocumentId) {
@@ -249,6 +252,7 @@ export function ExpenseDialog({
           ? centsToDollars(effectiveOcrData.amount.valueCents)
           : centsToDollars(expense.amountCents),
         comment: expense.comment,
+        category: expense.category,
       }
     : effectiveOcrData
       ? {
