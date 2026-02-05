@@ -52,7 +52,7 @@ export function ExpenseDetail({
   )
 
   // Find the best OCR data from documents (first completed one with data)
-  const ocrData = useMemo(() => {
+  const ocrDocumentWithData = useMemo(() => {
     if (!documents) return null
 
     for (const doc of documents) {
@@ -60,12 +60,14 @@ export function ExpenseDetail({
         const { amount, date, provider } = doc.ocrExtractedData
         // Only return if we have at least some useful data
         if (amount || date || provider) {
-          return doc.ocrExtractedData
+          return doc
         }
       }
     }
     return null
   }, [documents])
+
+  const ocrData = ocrDocumentWithData?.ocrExtractedData ?? null
 
   // Show toast for OCR failures (only once per document)
   const shownOcrErrors = useRef<Set<string>>(new Set())
@@ -302,6 +304,15 @@ export function ExpenseDetail({
         onOpenChange={setEditDialogOpen}
         expense={expense}
         ocrData={ocrData ?? undefined}
+        ocrDocument={
+          ocrDocumentWithData
+            ? {
+                _id: ocrDocumentWithData._id,
+                originalFilename: ocrDocumentWithData.originalFilename,
+                mimeType: ocrDocumentWithData.mimeType,
+              }
+            : undefined
+        }
       />
     </Sheet>
   )

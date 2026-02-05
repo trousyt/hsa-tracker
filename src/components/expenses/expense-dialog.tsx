@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
 import { ExpenseForm } from "./expense-form"
+import { DocumentThumbnail } from "./document-thumbnail"
+import { DocumentViewer } from "../documents/document-viewer"
 import { dollarsToCents, centsToDollars } from "@/lib/currency"
 import type { ExpenseFormData } from "@/lib/validations/expense"
 import { cn } from "@/lib/utils"
@@ -22,6 +24,11 @@ import {
   isValidFileType,
   isValidFileSize,
 } from "@/lib/compression"
+
+/** Fields that support OCR comparison */
+type OcrFieldKey = "amount" | "datePaid" | "provider"
+type FieldSource = "ocr" | "original"
+type OcrFieldSelections = Record<OcrFieldKey, FieldSource>
 
 interface OcrExtractedData {
   amount?: { valueCents: number; confidence: number }
@@ -41,6 +48,12 @@ interface ExpenseDialogProps {
     category?: string | null
   }
   ocrData?: OcrExtractedData
+  /** Document that provided the OCR data (for thumbnail display) */
+  ocrDocument?: {
+    _id: Id<"documents">
+    originalFilename: string
+    mimeType: string
+  }
 }
 
 type UploadStatus = "idle" | "compressing" | "uploading" | "saving" | "done" | "error"
@@ -51,6 +64,7 @@ export function ExpenseDialog({
   onOpenChange,
   expense,
   ocrData,
+  ocrDocument,
 }: ExpenseDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadedDocumentId, setUploadedDocumentId] = useState<Id<"documents"> | null>(null)
@@ -58,8 +72,19 @@ export function ExpenseDialog({
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploadedFilename, setUploadedFilename] = useState<string | null>(null)
+  const [uploadedMimeType, setUploadedMimeType] = useState<string | null>(null)
   const [formKey, setFormKey] = useState(0)
   const [localOcrData, setLocalOcrData] = useState<OcrExtractedData | null>(null)
+
+  // Field selection state - lives at dialog level to survive form remounts
+  const [fieldSelections, setFieldSelections] = useState<OcrFieldSelections>(() => ({
+    amount: "ocr",
+    datePaid: "ocr",
+    provider: "ocr",
+  }))
+
+  // DocumentViewer modal state
+  const [viewerOpen, setViewerOpen] = useState(false)
 
   const createExpense = useMutation(api.expenses.create)
   const updateExpense = useMutation(api.expenses.update)
@@ -102,14 +127,20 @@ export function ExpenseDialog({
       setUploadProgress(0)
       setUploadError(null)
       setUploadedFilename(null)
+      setUploadedMimeType(null)
       setLocalOcrData(null)
       setFormKey((k) => k + 1)
+      // Reset field selections for next open
+      setFieldSelections({ amount: "ocr", datePaid: "ocr", provider: "ocr" })
+      setViewerOpen(false)
     }
   }, [open, cleanupOrphanedDocument])
 
   // Watch for OCR completion and update form
   useEffect(() => {
     if (uploadedDocument?.ocrStatus === "completed" && uploadedDocument.ocrExtractedData) {
+      // Don't update form if submission is in progress (race condition prevention)
+      if (isSubmitting) return
       setLocalOcrData(uploadedDocument.ocrExtractedData)
       setFormKey((k) => k + 1) // Force form re-render with new defaults
       toast.success("Receipt data extracted!")
@@ -118,7 +149,7 @@ export function ExpenseDialog({
         description: uploadedDocument.ocrError || "Please enter details manually",
       })
     }
-  }, [uploadedDocument?.ocrStatus, uploadedDocument?.ocrExtractedData, uploadedDocument?.ocrError])
+  }, [uploadedDocument?.ocrStatus, uploadedDocument?.ocrExtractedData, uploadedDocument?.ocrError, isSubmitting])
 
   const ocrStatusFromDoc: OcrStatus = uploadedDocument?.ocrStatus ?? "idle"
 
@@ -133,6 +164,7 @@ export function ExpenseDialog({
       }
 
       setUploadedFilename(file.name)
+      setUploadedMimeType(file.type)
       setUploadError(null)
 
       // Compress image
@@ -241,6 +273,26 @@ export function ExpenseDialog({
   // Determine which OCR data to use: local (from upload) or prop (from "Apply Data")
   const effectiveOcrData = localOcrData ?? ocrData
 
+  // OCR values for comparison (only when editing with OCR data)
+  const ocrValues = effectiveOcrData && expense
+    ? {
+        datePaid: effectiveOcrData.date?.value ? new Date(effectiveOcrData.date.value) : undefined,
+        provider: effectiveOcrData.provider?.value,
+        amount: effectiveOcrData.amount?.valueCents
+          ? centsToDollars(effectiveOcrData.amount.valueCents)
+          : undefined,
+      }
+    : undefined
+
+  // Original expense values for comparison
+  const originalValues = expense
+    ? {
+        datePaid: new Date(expense.datePaid),
+        provider: expense.provider,
+        amount: centsToDollars(expense.amountCents),
+      }
+    : undefined
+
   // Build default values: OCR data overrides expense data when both present
   const defaultValues = expense
     ? {
@@ -262,6 +314,32 @@ export function ExpenseDialog({
           comment: "",
         }
       : undefined
+
+  // Handler for field selection changes - idempotent pattern
+  const handleFieldSelectionChange = useCallback(
+    (field: OcrFieldKey, source: FieldSource) => {
+      setFieldSelections((prev) => ({ ...prev, [field]: source }))
+    },
+    []
+  )
+
+  // Determine which document to show in thumbnail (prop or uploaded)
+  const thumbnailDocument = ocrDocument
+    ? {
+        id: ocrDocument._id,
+        filename: ocrDocument.originalFilename,
+        mimeType: ocrDocument.mimeType,
+      }
+    : uploadedDocumentId && uploadedFilename && uploadedMimeType
+      ? {
+          id: uploadedDocumentId,
+          filename: uploadedFilename,
+          mimeType: uploadedMimeType,
+        }
+      : null
+
+  // Show thumbnail when we have OCR data and a document
+  const showThumbnail = effectiveOcrData && thumbnailDocument
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -363,14 +441,42 @@ export function ExpenseDialog({
           </div>
         )}
 
+        {/* Document Thumbnail - when editing with OCR data */}
+        {showThumbnail && thumbnailDocument && (
+          <div className="mb-4">
+            <DocumentThumbnail
+              documentId={thumbnailDocument.id}
+              filename={thumbnailDocument.filename}
+              mimeType={thumbnailDocument.mimeType}
+              onClick={() => setViewerOpen(true)}
+            />
+          </div>
+        )}
+
         <ExpenseForm
           key={formKey}
           defaultValues={defaultValues}
           onSubmit={handleSubmit}
           onCancel={() => onOpenChange(false)}
           isSubmitting={isSubmitting}
+          ocrValues={ocrValues}
+          originalValues={originalValues}
+          ocrSelections={ocrData ? fieldSelections : undefined}
+          onOcrSelectionChange={ocrData ? handleFieldSelectionChange : undefined}
         />
       </DialogContent>
+
+      {/* Document Viewer Modal */}
+      {thumbnailDocument && (
+        <DocumentViewer
+          document={viewerOpen ? {
+            id: thumbnailDocument.id,
+            filename: thumbnailDocument.filename,
+            mimeType: thumbnailDocument.mimeType,
+          } : null}
+          onClose={() => setViewerOpen(false)}
+        />
+      )}
     </Dialog>
   )
 }
