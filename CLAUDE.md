@@ -25,9 +25,9 @@ bunx convex dev --once
 bunx shadcn@latest add <component-name>
 
 # Verify changes (run after every code change)
-bun run lint && bun run test 
+bunx tsc --noEmit && bun run lint && bun run test 
 
-# Verify changes (run right before commit)
+# Verify build (run right before commit)
 bun run build
 ```
 
@@ -63,11 +63,12 @@ This is an HSA (Health Savings Account) expense tracking application.
 
 - Use shadcn/ui components from `@/components/ui/*`
 - Use path alias `@/` for imports from `src/`
-- Currency: Always store as cents, display with `formatCurrency()`
+- Currency: Store as cents, use `formatCurrency(cents)` for DB values, `formatDollars(dollars)` for form values
 - Dates: Store as ISO strings (YYYY-MM-DD), use date-fns for formatting
 - Toasts: Use Sonner via `toast.success()`, `toast.error()`
 - Forms: Use React Hook Form with Zod resolver for validation
 - Mutations/Queries: Import from `convex/_generated/api`
+- **Docstrings:** Add JSDoc comments to functions, especially Convex mutations/queries and exported utilities
 
 ## Safety Rules
 
@@ -97,3 +98,68 @@ import { api } from "convex/_generated/api"
 1. `generateUploadUrl()` - Get signed URL from Convex
 2. `fetch(url, { method: "POST", body: file })` - Upload file
 3. `saveDocument({ storageId, ... })` - Save document record
+
+## Currency Handling in Forms
+
+**Two-format rule:** Values exist in two formats:
+- **Database**: Integer cents (2550 = $25.50)
+- **Forms**: Decimal dollars (25.50)
+
+**Display functions:**
+- `formatCurrency(cents)` - For database values (converts internally)
+- `formatDollars(dollars)` - For form values or already-converted amounts
+
+**Conversion boundaries:**
+- Form → Database: `dollarsToCents(formValue)`
+- Database → Form: `centsToDollars(dbValue)`
+
+**Common mistake:**
+```typescript
+// ❌ WRONG - formatCurrency expects cents, not dollars
+formatCurrency(centsToDollars(expense.amountCents))
+
+// ✓ CORRECT
+formatCurrency(expense.amountCents)  // OR
+formatDollars(centsToDollars(expense.amountCents))
+```
+
+## Form Field Wiring Checklist
+
+When adding fields to dialog-wrapped forms, ensure all sync points:
+
+- [ ] Zod schema in `src/lib/validations/*.ts`
+- [ ] Form JSX in form component
+- [ ] Dialog prop type definition
+- [ ] Dialog `defaultValues` construction
+- [ ] Dialog create mutation call
+- [ ] Dialog update mutation call
+- [ ] Backend mutation validator in `convex/*.ts`
+
+See: `docs/solutions/logic-errors/form-edit-dialog-field-synchronization.md`
+
+## null vs undefined for Optional Fields
+
+**Frontend (Zod):**
+- `.nullish()` = accepts undefined, null, or value (use for clearable fields)
+
+**Backend (Convex):**
+- `v.optional(v.string())` = undefined or string (rejects null!)
+- `v.optional(v.union(v.string(), v.null()))` = undefined, null, or string
+
+**Pattern for clearable fields:**
+```typescript
+// Frontend passes
+category: data.category ?? null  // undefined → null
+
+// Backend accepts
+category: v.optional(v.union(v.string(), v.null()))
+```
+
+**Pattern for non-clearable fields:**
+```typescript
+// Frontend passes
+comment: data.comment || undefined  // empty/null → undefined
+
+// Backend accepts
+comment: v.optional(v.string())
+```
