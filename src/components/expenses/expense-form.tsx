@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { format } from "date-fns"
+import { useMemo, useCallback } from "react"
 import { CalendarIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -29,12 +30,38 @@ import {
 import { cn } from "@/lib/utils"
 import { expenseSchema, type ExpenseFormData } from "@/lib/validations/expense"
 import { EXPENSE_CATEGORIES } from "@/lib/constants/expense-categories"
+import { formatDollars } from "@/lib/currency"
+
+/** Fields that support OCR comparison */
+type OcrFieldKey = "amount" | "datePaid" | "provider"
+type FieldSource = "ocr" | "original"
+type OcrFieldSelections = Record<OcrFieldKey, FieldSource>
+
+interface OcrFieldValues {
+  datePaid?: Date
+  provider?: string
+  amount?: number
+}
+
+interface OriginalFieldValues {
+  datePaid: Date
+  provider: string
+  amount: number
+}
 
 interface ExpenseFormProps {
   defaultValues?: Partial<ExpenseFormData>
   onSubmit: (data: ExpenseFormData) => void
   onCancel?: () => void
   isSubmitting?: boolean
+  /** OCR-extracted values for comparison */
+  ocrValues?: OcrFieldValues
+  /** Original expense values for comparison */
+  originalValues?: OriginalFieldValues
+  /** Current field source selections */
+  ocrSelections?: OcrFieldSelections
+  /** Callback when user toggles field source */
+  onOcrSelectionChange?: (field: OcrFieldKey, source: FieldSource) => void
 }
 
 export function ExpenseForm({
@@ -42,6 +69,10 @@ export function ExpenseForm({
   onSubmit,
   onCancel,
   isSubmitting = false,
+  ocrValues,
+  originalValues,
+  ocrSelections,
+  onOcrSelectionChange,
 }: ExpenseFormProps) {
   const form = useForm<ExpenseFormData>({
     resolver: zodResolver(expenseSchema),
@@ -53,6 +84,58 @@ export function ExpenseForm({
       category: defaultValues?.category ?? undefined,
     },
   })
+
+  // Compute which fields have differences between OCR and original
+  const fieldDiffs = useMemo(() => {
+    if (!ocrValues || !originalValues) {
+      return { datePaid: false, provider: false, amount: false }
+    }
+    return {
+      datePaid:
+        ocrValues.datePaid !== undefined &&
+        ocrValues.datePaid.getTime() !== originalValues.datePaid.getTime(),
+      provider:
+        ocrValues.provider !== undefined &&
+        ocrValues.provider.toLowerCase().trim() !==
+          originalValues.provider.toLowerCase().trim(),
+      amount:
+        ocrValues.amount !== undefined &&
+        ocrValues.amount !== originalValues.amount,
+    }
+  }, [ocrValues, originalValues])
+
+  // Idempotent handler for selecting a field source
+  const selectSource = useCallback(
+    (field: OcrFieldKey, source: FieldSource) => {
+      if (!ocrSelections || !onOcrSelectionChange || !ocrValues || !originalValues) {
+        return
+      }
+      if (ocrSelections[field] === source) return // Already selected
+
+      // Calculate new value BEFORE any state updates
+      let newValue: Date | string | number | undefined
+      if (field === "datePaid") {
+        newValue = source === "ocr" ? ocrValues.datePaid : originalValues.datePaid
+      } else if (field === "provider") {
+        newValue = source === "ocr" ? ocrValues.provider : originalValues.provider
+      } else if (field === "amount") {
+        newValue = source === "ocr" ? ocrValues.amount : originalValues.amount
+      }
+
+      // Update selection state and form value synchronously
+      onOcrSelectionChange(field, source)
+      if (newValue !== undefined) {
+        form.setValue(field, newValue as never, {
+          shouldValidate: true,
+          shouldDirty: true,
+        })
+      }
+    },
+    [ocrSelections, onOcrSelectionChange, ocrValues, originalValues, form]
+  )
+
+  // Check if diff indicators should be shown
+  const showDiffIndicators = ocrSelections && ocrValues && originalValues
 
   return (
     <Form {...form}>
@@ -94,6 +177,50 @@ export function ExpenseForm({
                 </PopoverContent>
               </Popover>
               <FormMessage />
+              {/* OCR Diff Indicator */}
+              {showDiffIndicators && fieldDiffs.datePaid && (
+                <div
+                  className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span className="truncate">
+                    {ocrSelections.datePaid === "ocr" ? (
+                      <>
+                        Was:{" "}
+                        <span className="font-medium">
+                          {format(originalValues.datePaid, "PPP")}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        OCR found:{" "}
+                        <span className="font-medium">
+                          {ocrValues.datePaid && format(ocrValues.datePaid, "PPP")}
+                        </span>
+                      </>
+                    )}
+                  </span>
+                  <span className="text-border">·</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      selectSource(
+                        "datePaid",
+                        ocrSelections.datePaid === "ocr" ? "original" : "ocr"
+                      )
+                    }
+                    className={cn(
+                      "underline underline-offset-2 transition-colors",
+                      "min-h-[44px] -my-4 py-4",
+                      "hover:text-foreground focus:outline-none focus-visible:text-foreground"
+                    )}
+                    aria-label={`Use ${ocrSelections.datePaid === "ocr" ? "original" : "OCR"} value for Date`}
+                  >
+                    {ocrSelections.datePaid === "ocr" ? "Use original" : "Apply OCR"}
+                  </button>
+                </div>
+              )}
             </FormItem>
           )}
         />
@@ -108,6 +235,46 @@ export function ExpenseForm({
                 <Input placeholder="e.g., Dr. Smith, CVS Pharmacy" {...field} />
               </FormControl>
               <FormMessage />
+              {/* OCR Diff Indicator */}
+              {showDiffIndicators && fieldDiffs.provider && (
+                <div
+                  className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span className="truncate">
+                    {ocrSelections.provider === "ocr" ? (
+                      <>
+                        Was:{" "}
+                        <span className="font-medium">"{originalValues.provider}"</span>
+                      </>
+                    ) : (
+                      <>
+                        OCR found:{" "}
+                        <span className="font-medium">"{ocrValues.provider}"</span>
+                      </>
+                    )}
+                  </span>
+                  <span className="text-border">·</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      selectSource(
+                        "provider",
+                        ocrSelections.provider === "ocr" ? "original" : "ocr"
+                      )
+                    }
+                    className={cn(
+                      "underline underline-offset-2 transition-colors",
+                      "min-h-[44px] -my-4 py-4",
+                      "hover:text-foreground focus:outline-none focus-visible:text-foreground"
+                    )}
+                    aria-label={`Use ${ocrSelections.provider === "ocr" ? "original" : "OCR"} value for Provider`}
+                  >
+                    {ocrSelections.provider === "ocr" ? "Use original" : "Apply OCR"}
+                  </button>
+                </div>
+              )}
             </FormItem>
           )}
         />
@@ -159,6 +326,51 @@ export function ExpenseForm({
                 />
               </FormControl>
               <FormMessage />
+              {/* OCR Diff Indicator */}
+              {showDiffIndicators && fieldDiffs.amount && (
+                <div
+                  className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span className="truncate">
+                    {ocrSelections.amount === "ocr" ? (
+                      <>
+                        Was:{" "}
+                        <span className="font-medium">
+                          {formatDollars(originalValues.amount)}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        OCR found:{" "}
+                        <span className="font-medium">
+                          {ocrValues.amount !== undefined &&
+                            formatDollars(ocrValues.amount)}
+                        </span>
+                      </>
+                    )}
+                  </span>
+                  <span className="text-border">·</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      selectSource(
+                        "amount",
+                        ocrSelections.amount === "ocr" ? "original" : "ocr"
+                      )
+                    }
+                    className={cn(
+                      "underline underline-offset-2 transition-colors",
+                      "min-h-[44px] -my-4 py-4",
+                      "hover:text-foreground focus:outline-none focus-visible:text-foreground"
+                    )}
+                    aria-label={`Use ${ocrSelections.amount === "ocr" ? "original" : "OCR"} value for Amount`}
+                  >
+                    {ocrSelections.amount === "ocr" ? "Use original" : "Apply OCR"}
+                  </button>
+                </div>
+              )}
             </FormItem>
           )}
         />

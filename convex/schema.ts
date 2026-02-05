@@ -21,7 +21,7 @@ export default defineSchema({
     provider: v.string(), // Provider/vendor name
     amountCents: v.number(), // Amount in cents (integer)
     comment: v.optional(v.string()),
-    category: v.optional(v.string()), // IRS-aligned expense category (optional)
+    category: v.optional(v.union(v.string(), v.null())), // IRS-aligned expense category (optional, null to clear)
     documentIds: v.array(v.id("documents")),
     totalReimbursedCents: v.number(), // Denormalized for queries
     status: v.union(
