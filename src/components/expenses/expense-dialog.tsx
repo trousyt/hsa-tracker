@@ -252,7 +252,7 @@ export function ExpenseDialog({
           provider: data.provider,
           amountCents: dollarsToCents(data.amount),
           comment: data.comment || undefined,
-          category: data.category ?? null,
+          category: data.category || undefined,
         })
         // Attach uploaded document to the new expense
         if (uploadedDocumentId) {
