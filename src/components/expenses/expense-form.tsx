@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { format } from "date-fns"
-import { useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { CalendarIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -136,6 +136,20 @@ export function ExpenseForm({
 
   // Check if diff indicators should be shown
   const showDiffIndicators = ocrSelections && ocrValues && originalValues
+
+  // Currency display state — tracks formatted string independently of form value
+  const [displayAmount, setDisplayAmount] = useState(() => {
+    const val = defaultValues?.amount
+    return val !== undefined && val !== null ? Number(val).toFixed(2) : ""
+  })
+
+  // Sync display when form amount changes externally (e.g., OCR toggle)
+  const watchedAmount = form.watch("amount")
+  useEffect(() => {
+    if (watchedAmount !== undefined && watchedAmount !== null) {
+      setDisplayAmount(Number(watchedAmount).toFixed(2))
+    }
+  }, [watchedAmount])
 
   return (
     <Form {...form}>
@@ -315,15 +329,40 @@ export function ExpenseForm({
           name="amount"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Amount ($)</FormLabel>
+              <FormLabel>Amount</FormLabel>
               <FormControl>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  placeholder="0.00"
-                  {...field}
-                />
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">
+                    $
+                  </span>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    className="pl-7"
+                    value={displayAmount}
+                    onChange={(e) => {
+                      // Allow only digits and one decimal point
+                      const raw = e.target.value.replace(/[^0-9.]/g, "")
+                      const parts = raw.split(".")
+                      const sanitized = parts.length > 2
+                        ? parts[0] + "." + parts.slice(1).join("")
+                        : raw
+                      setDisplayAmount(sanitized)
+                    }}
+                    onBlur={() => {
+                      const parsed = parseFloat(displayAmount)
+                      if (!isNaN(parsed) && parsed > 0) {
+                        const formatted = parsed.toFixed(2)
+                        setDisplayAmount(formatted)
+                        field.onChange(parsed)
+                      } else if (displayAmount === "") {
+                        field.onChange(undefined)
+                      }
+                    }}
+                    onFocus={(e) => e.target.select()}
+                  />
+                </div>
               </FormControl>
               <FormMessage />
               {/* OCR Diff Indicator */}
