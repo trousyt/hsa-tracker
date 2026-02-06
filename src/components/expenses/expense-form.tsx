@@ -201,7 +201,7 @@ export function ExpenseForm({
                       </>
                     )}
                   </span>
-                  <span className="text-border">·</span>
+                  <span className="text-border" aria-hidden="true">·</span>
                   <button
                     type="button"
                     onClick={() =>
@@ -213,7 +213,7 @@ export function ExpenseForm({
                     className={cn(
                       "underline underline-offset-2 transition-colors",
                       "min-h-[44px] -my-4 py-4",
-                      "hover:text-foreground focus:outline-none focus-visible:text-foreground"
+                      "hover:text-foreground focus:outline-none focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm"
                     )}
                     aria-label={`Use ${ocrSelections.datePaid === "ocr" ? "original" : "OCR"} value for Date`}
                   >
@@ -255,7 +255,7 @@ export function ExpenseForm({
                       </>
                     )}
                   </span>
-                  <span className="text-border">·</span>
+                  <span className="text-border" aria-hidden="true">·</span>
                   <button
                     type="button"
                     onClick={() =>
@@ -267,7 +267,7 @@ export function ExpenseForm({
                     className={cn(
                       "underline underline-offset-2 transition-colors",
                       "min-h-[44px] -my-4 py-4",
-                      "hover:text-foreground focus:outline-none focus-visible:text-foreground"
+                      "hover:text-foreground focus:outline-none focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm"
                     )}
                     aria-label={`Use ${ocrSelections.provider === "ocr" ? "original" : "OCR"} value for Provider`}
                   >
@@ -351,7 +351,7 @@ export function ExpenseForm({
                       </>
                     )}
                   </span>
-                  <span className="text-border">·</span>
+                  <span className="text-border" aria-hidden="true">·</span>
                   <button
                     type="button"
                     onClick={() =>
@@ -363,7 +363,7 @@ export function ExpenseForm({
                     className={cn(
                       "underline underline-offset-2 transition-colors",
                       "min-h-[44px] -my-4 py-4",
-                      "hover:text-foreground focus:outline-none focus-visible:text-foreground"
+                      "hover:text-foreground focus:outline-none focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm"
                     )}
                     aria-label={`Use ${ocrSelections.amount === "ocr" ? "original" : "OCR"} value for Amount`}
                   >
