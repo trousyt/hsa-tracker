@@ -215,7 +215,7 @@ export function ExpenseForm({
                       </>
                     )}
                   </span>
-                  <span className="text-border" aria-hidden="true">·</span>
+                  <span className="text-muted-foreground/50" aria-hidden="true">·</span>
                   <button
                     type="button"
                     onClick={() =>
@@ -269,7 +269,7 @@ export function ExpenseForm({
                       </>
                     )}
                   </span>
-                  <span className="text-border" aria-hidden="true">·</span>
+                  <span className="text-muted-foreground/50" aria-hidden="true">·</span>
                   <button
                     type="button"
                     onClick={() =>
@@ -306,7 +306,7 @@ export function ExpenseForm({
                 value={field.value ?? "__none__"}
               >
                 <FormControl>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                 </FormControl>
@@ -332,14 +332,14 @@ export function ExpenseForm({
               <FormLabel>Amount</FormLabel>
               <FormControl>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">
                     $
                   </span>
                   <Input
                     type="text"
                     inputMode="decimal"
                     placeholder="0.00"
-                    className="pl-7"
+                    className="pl-6"
                     value={displayAmount}
                     onChange={(e) => {
                       // Allow only digits and one decimal point
@@ -390,7 +390,7 @@ export function ExpenseForm({
                       </>
                     )}
                   </span>
-                  <span className="text-border" aria-hidden="true">·</span>
+                  <span className="text-muted-foreground/50" aria-hidden="true">·</span>
                   <button
                     type="button"
                     onClick={() =>

@@ -350,7 +350,7 @@ export function ExpenseDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "p-0 gap-0 overflow-hidden",
+          "p-0 gap-0 overflow-hidden max-h-[90vh]",
           showPreview ? "sm:max-w-5xl" : "sm:max-w-[425px]"
         )}
         onOpenAutoFocus={(e) => {
@@ -366,15 +366,17 @@ export function ExpenseDialog({
           }
         }}
       >
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle>
-            {isEditing ? "Edit Expense" : "Add Expense"}
-          </DialogTitle>
-        </DialogHeader>
+        {!showPreview && (
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle>
+              {isEditing ? "Edit Expense" : "Add Expense"}
+            </DialogTitle>
+          </DialogHeader>
+        )}
 
         <div className={cn(
-          "flex flex-col",
-          showPreview && "md:flex-row md:min-h-[500px]"
+          "flex flex-col overflow-y-auto",
+          showPreview && "md:flex-row md:min-h-[500px] md:overflow-y-hidden"
         )}>
           {/* Left Panel: Document Preview (60%) */}
           {showPreview && (
@@ -434,12 +436,19 @@ export function ExpenseDialog({
               showPreview ? "md:w-2/5 md:max-h-[80vh]" : "w-full"
             )}
           >
+            {/* Dialog title inside form panel for two-panel mode */}
+            {showPreview && (
+              <DialogHeader className="pb-4">
+                <DialogTitle>Edit Expense</DialogTitle>
+              </DialogHeader>
+            )}
+
             {/* OCR Banner - when editing with OCR data from "Apply Data" */}
             {effectiveOcrData && (
               <div className="flex items-center gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg mb-4">
                 <Sparkles className="h-4 w-4 text-primary flex-shrink-0" />
                 <p className="text-sm">
-                  Values pre-filled from receipt scan. Review and edit as needed.
+                  Receipt data pre-filled. Review and edit as needed.
                 </p>
               </div>
             )}
