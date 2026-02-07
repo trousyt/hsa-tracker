@@ -131,6 +131,7 @@ export function DocumentGallery({
                     mimeType: doc.mimeType,
                   })
                 }
+                aria-label={`View document: ${doc.originalFilename}`}
                 className="w-full aspect-[4/3] flex items-center justify-center hover:bg-muted/50 transition-colors"
               >
                 {getFileIcon(doc.mimeType)}
@@ -150,13 +151,13 @@ export function DocumentGallery({
               </div>
 
               {/* Hover actions */}
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex gap-1">
                 <Button
                   size="icon"
                   variant="destructive"
                   className="h-7 w-7"
                   onClick={() => setDeletingDocumentId(doc._id)}
-                  title="Delete"
+                  aria-label={`Delete ${doc.originalFilename}`}
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>

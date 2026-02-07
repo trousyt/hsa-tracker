@@ -24,6 +24,7 @@ import { ReimbursementForm } from "@/components/reimbursements/reimbursement-for
 import { ReimbursementHistory } from "@/components/reimbursements/reimbursement-history"
 import { QuickReimburseButton } from "@/components/reimbursements/quick-reimburse-button"
 import { ExpenseDialog } from "./expense-dialog"
+import { getBestOcrData } from "@/lib/ocr"
 
 interface ExpenseDetailProps {
   expenseId: Id<"expenses"> | null
@@ -51,23 +52,13 @@ export function ExpenseDetail({
     expense?.documentIds?.length ? { ids: expense.documentIds } : "skip"
   )
 
-  // Find the best OCR data from documents (first completed one with data)
-  const ocrDocumentWithData = useMemo(() => {
+  // Aggregate OCR data across all documents, picking highest-confidence per field
+  const bestOcr = useMemo(() => {
     if (!documents) return null
-
-    for (const doc of documents) {
-      if (doc?.ocrStatus === "completed" && doc.ocrExtractedData) {
-        const { amount, date, provider } = doc.ocrExtractedData
-        // Only return if we have at least some useful data
-        if (amount || date || provider) {
-          return doc
-        }
-      }
-    }
-    return null
+    return getBestOcrData(documents)
   }, [documents])
 
-  const ocrData = ocrDocumentWithData?.ocrExtractedData ?? null
+  const ocrData = bestOcr?.data ?? null
 
   // Show toast for OCR failures (only once per document)
   const shownOcrErrors = useRef<Set<string>>(new Set())
@@ -305,11 +296,11 @@ export function ExpenseDetail({
         expense={expense}
         ocrData={ocrData ?? undefined}
         ocrDocument={
-          ocrDocumentWithData
+          bestOcr?.primaryDocument
             ? {
-                _id: ocrDocumentWithData._id,
-                originalFilename: ocrDocumentWithData.originalFilename,
-                mimeType: ocrDocumentWithData.mimeType,
+                _id: bestOcr.primaryDocument._id as Id<"documents">,
+                originalFilename: bestOcr.primaryDocument.originalFilename,
+                mimeType: bestOcr.primaryDocument.mimeType,
               }
             : undefined
         }

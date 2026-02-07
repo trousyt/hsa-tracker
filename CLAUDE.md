@@ -33,6 +33,15 @@ bun run build
 
 **Important:** After every code change, run lint, test, and build to confirm changes work correctly.
 
+## Completion Checklist
+
+Before considering a feature or fix complete, run browser automation checks (Claude in Chrome) against the running dev server at `http://localhost:5173`:
+
+1. **Functionality**: Verify the feature works end-to-end (click through flows, submit forms, check state updates)
+2. **Design fidelity**: Take screenshots and zoom into key UI elements to confirm layout, spacing, and visual quality
+3. **Accessibility**: Inspect the accessibility tree (`read_page`), verify all interactive elements have accessible names, check `aria-live` regions update, test keyboard navigation (Tab/Enter), and confirm visible focus indicators
+4. **Responsive design**: Use `resize_window` to test at phone (375x667), tablet (768x1024), and desktop (1280x800) breakpoints. Verify layouts adapt correctly and nothing overflows or becomes unusable
+
 ## Project Architecture
 
 This is an HSA (Health Savings Account) expense tracking application.
@@ -69,6 +78,7 @@ This is an HSA (Health Savings Account) expense tracking application.
 - Forms: Use React Hook Form with Zod resolver for validation
 - Mutations/Queries: Import from `convex/_generated/api`
 - **Docstrings:** Add JSDoc comments to functions, especially Convex mutations/queries and exported utilities
+- **Accessibility**: All interactive elements must have accessible names (`aria-label` or visible text). Use `role`, `aria-live`, and `aria-hidden` appropriately. Ensure visible focus indicators on all focusable elements. Decorative elements should have `aria-hidden="true"`.
 
 ## Safety Rules
 
@@ -83,6 +93,14 @@ When implementing destructive functionality: write the code, push/deploy it, the
 ## User Preferences
 
 - **Ask for information instead of using placeholders.** When you need specific information (URLs, credentials, names, etc.), ask the user directly rather than inserting placeholders or leaving manual steps.
+
+## Plans
+
+Plans are stored in `docs/plans/` using the format:
+```
+YYYY-MM-DD-{type}-{description}-plan.md
+```
+Where `{type}` is one of: `feat`, `fix`, `refactor`, `polish`, etc.
 
 ## Key Patterns
 
