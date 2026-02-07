@@ -155,6 +155,46 @@ When adding fields to dialog-wrapped forms, ensure all sync points:
 
 See: `docs/solutions/logic-errors/form-edit-dialog-field-synchronization.md`
 
+## Currency Input Pattern
+
+Use `type="text"` with `inputMode="decimal"` for currency inputs — never `type="number"` which strips trailing zeros and prevents formatting control.
+
+**Format-on-blur pattern:**
+```tsx
+const [displayAmount, setDisplayAmount] = useState("")
+const watchedAmount = form.watch("amount")
+
+// Sync from form value → display (e.g., when OCR toggles change the value)
+useEffect(() => {
+  if (watchedAmount !== undefined && watchedAmount !== null) {
+    setDisplayAmount(Number(watchedAmount).toFixed(2))
+  }
+}, [watchedAmount])
+
+// Input: type="text", inputMode="decimal", value={displayAmount}
+// onChange: sanitize to digits + one decimal
+// onBlur: parseFloat → toFixed(2) → form.setValue()
+// onFocus: e.target.select()
+```
+
+Zod uses `z.coerce.number()` so the string-to-number coercion works automatically.
+
+## Dialog Layout Patterns
+
+**Two-panel dialog** (for side-by-side comparison):
+- Use conditional width: `sm:max-w-5xl` when preview shown, `sm:max-w-[425px]` for single-column
+- **Always add `max-h-[90vh]`** to `DialogContent` to prevent mobile overflow
+- Flex container: `overflow-y-auto` on mobile, `md:overflow-y-hidden` on desktop
+- Place `DialogTitle` inside the form panel (not above both panels) for correct visual hierarchy
+- Use `onOpenAutoFocus` to direct focus to the first form field (skip preview panel)
+- Add skip link (`sr-only focus:not-sr-only`) before iframe content to avoid keyboard traps
+
+## OCR Data Aggregation
+
+When an expense has multiple documents with OCR data, aggregate by picking the highest-confidence value per field independently. The utility lives in `src/lib/ocr.ts`:
+- `getBestOcrData(documents)` returns aggregated data + the primary document (contributed most fields)
+- The primary document is shown in the preview panel
+
 ## null vs undefined for Optional Fields
 
 **Frontend (Zod):**
