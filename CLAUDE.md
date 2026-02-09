@@ -73,12 +73,22 @@ This is an HSA (Health Savings Account) expense tracking application.
 - Use shadcn/ui components from `@/components/ui/*`
 - Use path alias `@/` for imports from `src/`
 - Currency: Store as cents, use `formatCurrency(cents)` for DB values, `formatDollars(dollars)` for form values
-- Dates: Store as ISO strings (YYYY-MM-DD), use date-fns for formatting
+- Dates: Store as ISO strings (YYYY-MM-DD), use `parseLocalDate()` / `formatLocalDate()` / `displayLocalDate()` from `src/lib/dates.ts` for timezone-safe handling
 - Toasts: Use Sonner via `toast.success()`, `toast.error()`
 - Forms: Use React Hook Form with Zod resolver for validation
 - Mutations/Queries: Import from `convex/_generated/api`
 - **Docstrings:** Add JSDoc comments to functions, especially Convex mutations/queries and exported utilities
 - **Accessibility**: All interactive elements must have accessible names (`aria-label` or visible text). Use `role`, `aria-live`, and `aria-hidden` appropriately. Ensure visible focus indicators on all focusable elements. Decorative elements should have `aria-hidden="true"`.
+
+## Testing
+
+See [`docs/testing-conventions.md`](docs/testing-conventions.md) for full testing guide.
+
+- **Framework:** Vitest with `edge-runtime` environment
+- **Location:** Tests live next to the code they test (e.g., `src/lib/dates.ts` → `src/lib/dates.test.ts`)
+- **Required:** Every new utility in `src/lib/` must have a corresponding `.test.ts` file
+- **Run:** `bun run test` (included in the verify command above)
+- **Key patterns:** Round-trip tests for two-format values, explicit edge case coverage, mock `global.fetch` for external calls
 
 ## Safety Rules
 
