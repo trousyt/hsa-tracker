@@ -1,4 +1,5 @@
 import { parseCurrencyToCents } from "./currency"
+import { formatLocalDate } from "./dates"
 import type { Id } from "../../convex/_generated/dataModel"
 import {
   isValidCategory,
@@ -238,8 +239,8 @@ export function parseDateToISO(dateStr: string): string | null {
 
 function isValidDateParts(year: string, month: string, day: string): boolean {
   const dateStr = `${year}-${month}-${day}`
-  const date = new Date(dateStr + "T00:00:00")
-  return !isNaN(date.getTime()) && dateStr === date.toISOString().split("T")[0]
+  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+  return !isNaN(date.getTime()) && dateStr === formatLocalDate(date)
 }
 
 export function isValidISODate(dateStr: string): boolean {
@@ -352,8 +353,9 @@ export function matchPdfToExpense(
 }
 
 function isValidFullDate(dateStr: string): boolean {
-  const date = new Date(dateStr + "T00:00:00")
-  return !isNaN(date.getTime()) && dateStr === date.toISOString().split("T")[0]
+  const [year, month, day] = dateStr.split("-").map(Number)
+  const date = new Date(year, month - 1, day)
+  return !isNaN(date.getTime()) && dateStr === formatLocalDate(date)
 }
 
 export function extractDateFromFilename(filename: string): ExtractedDate {

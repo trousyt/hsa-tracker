@@ -25,6 +25,7 @@ import {
 import { Calendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
 import { dollarsToCents, centsToDollars, formatCurrency } from "@/lib/currency"
+import { formatLocalDate } from "@/lib/dates"
 import {
   reimbursementSchema,
   type ReimbursementFormData,
@@ -68,7 +69,7 @@ export function ReimbursementForm({
       await recordReimbursement({
         expenseId,
         amountCents,
-        date: data.date?.toISOString().split("T")[0],
+        date: data.date ? formatLocalDate(data.date) : undefined,
         notes: data.notes || undefined,
       })
 

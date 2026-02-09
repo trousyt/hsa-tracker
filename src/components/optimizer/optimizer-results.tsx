@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { formatCurrency } from "@/lib/currency"
+import { displayLocalDate } from "@/lib/dates"
 
 type Expense = Doc<"expenses">
 
@@ -118,14 +119,11 @@ export function OptimizerResults({ result, onReset }: OptimizerResultsProps) {
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Calendar className="h-3 w-3" />
-                        {new Date(expense.datePaid).toLocaleDateString(
-                          "en-US",
-                          {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          }
-                        )}
+                        {displayLocalDate(expense.datePaid, "en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
                       </div>
                     </div>
                     <div className="text-right">
