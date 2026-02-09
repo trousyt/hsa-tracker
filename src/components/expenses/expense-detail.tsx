@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatCurrency } from "@/lib/currency"
+import { displayLocalDate } from "@/lib/dates"
 import { FileUploader } from "@/components/documents/file-uploader"
 import { DocumentGallery } from "@/components/documents/document-gallery"
 import { ReimbursementForm } from "@/components/reimbursements/reimbursement-form"
@@ -37,7 +38,8 @@ export function ExpenseDetail({
   open,
   onOpenChange,
 }: ExpenseDetailProps) {
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editMode, setEditMode] = useState<"edit" | "apply-ocr" | null>(null)
+  const editDialogOpen = editMode !== null
 
   const acknowledgeOcr = useMutation(api.expenses.acknowledgeOcr)
 
@@ -130,7 +132,7 @@ export function ExpenseDetail({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setEditDialogOpen(true)}
+            onClick={() => setEditMode("edit")}
           >
             <Pencil className="h-4 w-4 mr-2" />
             Edit
@@ -166,11 +168,7 @@ export function ExpenseDetail({
               <div>
                 <p className="text-sm text-muted-foreground">Date Paid</p>
                 <p className="font-medium">
-                  {new Date(expense.datePaid).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
+                  {displayLocalDate(expense.datePaid)}
                 </p>
               </div>
               <div>
@@ -226,7 +224,7 @@ export function ExpenseDetail({
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => setEditDialogOpen(true)}
+                    onClick={() => setEditMode("apply-ocr")}
                   >
                     Apply Data
                   </Button>
@@ -292,11 +290,11 @@ export function ExpenseDetail({
       {/* Edit Dialog with OCR Data */}
       <ExpenseDialog
         open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
+        onOpenChange={(open) => { if (!open) setEditMode(null) }}
         expense={expense}
-        ocrData={ocrData ?? undefined}
+        ocrData={editMode === "apply-ocr" ? (ocrData ?? undefined) : undefined}
         ocrDocument={
-          bestOcr?.primaryDocument
+          editMode === "apply-ocr" && bestOcr?.primaryDocument
             ? {
                 _id: bestOcr.primaryDocument._id as Id<"documents">,
                 originalFilename: bestOcr.primaryDocument.originalFilename,
