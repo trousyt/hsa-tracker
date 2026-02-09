@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { formatCurrency } from "@/lib/currency"
+import { displayLocalDate } from "@/lib/dates"
 import { getCategoryLabel } from "@/lib/constants/expense-categories"
 
 type Expense = Doc<"expenses"> & { hasUnacknowledgedOcr?: boolean }
@@ -50,8 +51,7 @@ export function getExpenseColumns({
         )
       },
       cell: ({ row }) => {
-        const date = new Date(row.getValue("datePaid"))
-        return date.toLocaleDateString("en-US", {
+        return displayLocalDate(row.getValue("datePaid"), "en-US", {
           year: "numeric",
           month: "short",
           day: "numeric",

@@ -18,6 +18,7 @@ import { dollarsToCents, centsToDollars } from "@/lib/currency"
 import { useSecureFile } from "@/lib/secure-file"
 import type { ExpenseFormData } from "@/lib/validations/expense"
 import { cn } from "@/lib/utils"
+import { parseLocalDate, formatLocalDate } from "@/lib/dates"
 import {
   compressImage,
   isValidFileType,
@@ -232,7 +233,7 @@ export function ExpenseDialog({
       if (isEditing && expense) {
         await updateExpense({
           id: expense._id,
-          datePaid: data.datePaid.toISOString().split("T")[0],
+          datePaid: formatLocalDate(data.datePaid),
           provider: data.provider,
           amountCents: dollarsToCents(data.amount),
           comment: data.comment || undefined,
@@ -245,7 +246,7 @@ export function ExpenseDialog({
         toast.success("Expense updated successfully")
       } else {
         const expenseId = await createExpense({
-          datePaid: data.datePaid.toISOString().split("T")[0],
+          datePaid: formatLocalDate(data.datePaid),
           provider: data.provider,
           amountCents: dollarsToCents(data.amount),
           comment: data.comment || undefined,
@@ -273,7 +274,7 @@ export function ExpenseDialog({
   // OCR values for comparison (only when editing with OCR data)
   const ocrValues = effectiveOcrData && expense
     ? {
-        datePaid: effectiveOcrData.date?.value ? new Date(effectiveOcrData.date.value) : undefined,
+        datePaid: effectiveOcrData.date?.value ? parseLocalDate(effectiveOcrData.date.value) : undefined,
         provider: effectiveOcrData.provider?.value,
         amount: effectiveOcrData.amount?.valueCents
           ? centsToDollars(effectiveOcrData.amount.valueCents)
@@ -284,7 +285,7 @@ export function ExpenseDialog({
   // Original expense values for comparison
   const originalValues = expense
     ? {
-        datePaid: new Date(expense.datePaid),
+        datePaid: parseLocalDate(expense.datePaid),
         provider: expense.provider,
         amount: centsToDollars(expense.amountCents),
       }
@@ -294,8 +295,8 @@ export function ExpenseDialog({
   const defaultValues = expense
     ? {
         datePaid: effectiveOcrData?.date?.value
-          ? new Date(effectiveOcrData.date.value)
-          : new Date(expense.datePaid),
+          ? parseLocalDate(effectiveOcrData.date.value)
+          : parseLocalDate(expense.datePaid),
         provider: effectiveOcrData?.provider?.value ?? expense.provider,
         amount: effectiveOcrData?.amount?.valueCents
           ? centsToDollars(effectiveOcrData.amount.valueCents)
@@ -305,7 +306,7 @@ export function ExpenseDialog({
       }
     : effectiveOcrData
       ? {
-          datePaid: effectiveOcrData.date?.value ? new Date(effectiveOcrData.date.value) : new Date(),
+          datePaid: effectiveOcrData.date?.value ? parseLocalDate(effectiveOcrData.date.value) : new Date(),
           provider: effectiveOcrData.provider?.value ?? "",
           amount: effectiveOcrData.amount?.valueCents ? centsToDollars(effectiveOcrData.amount.valueCents) : undefined,
           comment: "",

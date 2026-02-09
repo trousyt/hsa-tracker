@@ -1,5 +1,6 @@
 import type { Doc } from "../../convex/_generated/dataModel"
 import { centsToDollars } from "./currency"
+import { formatLocalDate } from "./dates"
 import { getCategoryLabel } from "./constants/expense-categories"
 import type { ExpenseCategory } from "./constants/expense-categories"
 
@@ -42,7 +43,7 @@ export function exportExpensesToCSV(expenses: Expense[]): void {
   link.setAttribute("href", url)
   link.setAttribute(
     "download",
-    `hsa-expenses-${new Date().toISOString().split("T")[0]}.csv`
+    `hsa-expenses-${formatLocalDate(new Date())}.csv`
   )
   link.style.visibility = "hidden"
 
