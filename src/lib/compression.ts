@@ -1,10 +1,10 @@
-import imageCompression from "browser-image-compression"
-
 const MAX_SIZE_MB = 0.5 // Target max file size (500KB)
 const MAX_WIDTH_OR_HEIGHT = 1920 // Max dimension
 
 /**
- * Compress an image file to reduce storage costs
+ * Compress an image file to reduce storage costs.
+ * Dynamically imports browser-image-compression to avoid loading
+ * the 57KB library until the user actually uploads an image.
  */
 export async function compressImage(file: File): Promise<File> {
   // Skip compression for non-image files
@@ -25,6 +25,7 @@ export async function compressImage(file: File): Promise<File> {
   }
 
   try {
+    const { default: imageCompression } = await import("browser-image-compression")
     const compressedFile = await imageCompression(file, options)
     console.log(
       `Compressed ${file.name}: ${(file.size / 1024).toFixed(1)}KB → ${(compressedFile.size / 1024).toFixed(1)}KB`

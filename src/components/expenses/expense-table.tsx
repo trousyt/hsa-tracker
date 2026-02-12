@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, lazy, Suspense } from "react"
 import {
   flexRender,
   getCoreRowModel,
@@ -35,10 +35,18 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { getExpenseColumns } from "./expense-columns"
 import { exportExpensesToCSV } from "@/lib/export"
 import { formatCurrency } from "@/lib/currency"
-import { ExpenseDialog } from "./expense-dialog"
-import { DeleteExpenseDialog } from "./delete-expense-dialog"
-import { ExpenseDetail } from "./expense-detail"
-import { ImportWizard } from "../import/import-wizard"
+const ExpenseDialog = lazy(() =>
+  import("./expense-dialog").then((m) => ({ default: m.ExpenseDialog }))
+)
+const DeleteExpenseDialog = lazy(() =>
+  import("./delete-expense-dialog").then((m) => ({ default: m.DeleteExpenseDialog }))
+)
+const ExpenseDetail = lazy(() =>
+  import("./expense-detail").then((m) => ({ default: m.ExpenseDetail }))
+)
+const ImportWizard = lazy(() =>
+  import("../import/import-wizard").then((m) => ({ default: m.ImportWizard }))
+)
 import {
   EXPENSE_CATEGORIES,
   type ExpenseCategory,
@@ -173,7 +181,9 @@ export function ExpenseTable() {
   if (showImportWizard) {
     return (
       <div className="space-y-4">
-        <ImportWizard onClose={() => setShowImportWizard(false)} />
+        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+          <ImportWizard onClose={() => setShowImportWizard(false)} />
+        </Suspense>
       </div>
     )
   }
@@ -298,31 +308,39 @@ export function ExpenseTable() {
       </div>
 
       {/* Create Dialog */}
-      <ExpenseDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-      />
+      <Suspense fallback={null}>
+        <ExpenseDialog
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+        />
+      </Suspense>
 
       {/* Edit Dialog */}
-      <ExpenseDialog
-        open={!!editExpense}
-        onOpenChange={(open) => !open && setEditExpense(null)}
-        expense={editExpense ?? undefined}
-      />
+      <Suspense fallback={null}>
+        <ExpenseDialog
+          open={!!editExpense}
+          onOpenChange={(open) => !open && setEditExpense(null)}
+          expense={editExpense ?? undefined}
+        />
+      </Suspense>
 
       {/* Delete Dialog */}
-      <DeleteExpenseDialog
-        open={!!deleteExpense}
-        onOpenChange={(open) => !open && setDeleteExpense(null)}
-        expense={deleteExpense}
-      />
+      <Suspense fallback={null}>
+        <DeleteExpenseDialog
+          open={!!deleteExpense}
+          onOpenChange={(open) => !open && setDeleteExpense(null)}
+          expense={deleteExpense}
+        />
+      </Suspense>
 
       {/* Detail Sheet */}
-      <ExpenseDetail
-        expenseId={viewExpenseId}
-        open={!!viewExpenseId}
-        onOpenChange={(open) => !open && setViewExpenseId(null)}
-      />
+      <Suspense fallback={null}>
+        <ExpenseDetail
+          expenseId={viewExpenseId}
+          open={!!viewExpenseId}
+          onOpenChange={(open) => !open && setViewExpenseId(null)}
+        />
+      </Suspense>
     </div>
   )
 }

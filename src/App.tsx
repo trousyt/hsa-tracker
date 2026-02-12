@@ -1,15 +1,37 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, lazy, Suspense } from "react"
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react"
 import { useAuthActions } from "@convex-dev/auth/react"
 import { Toaster } from "@/components/ui/sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { ExpenseTable } from "@/components/expenses/expense-table"
-import { Optimizer } from "@/components/optimizer/optimizer"
-import { Dashboard } from "@/components/dashboard/dashboard"
+import { Skeleton } from "@/components/ui/skeleton"
 import { SignIn } from "@/components/auth/sign-in"
 import { AuthLoading as AuthLoadingScreen } from "@/components/auth/auth-loading"
 import { LayoutDashboard, Receipt, Calculator, LogOut } from "lucide-react"
+
+const Dashboard = lazy(() =>
+  import("@/components/dashboard/dashboard").then((m) => ({ default: m.Dashboard }))
+)
+const ExpenseTable = lazy(() =>
+  import("@/components/expenses/expense-table").then((m) => ({ default: m.ExpenseTable }))
+)
+const Optimizer = lazy(() =>
+  import("@/components/optimizer/optimizer").then((m) => ({ default: m.Optimizer }))
+)
+
+/** Loading skeleton shown while lazy-loaded tab content is fetched */
+function TabSkeleton() {
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-7 w-48" />
+      <div className="space-y-3">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-4 w-1/2" />
+      </div>
+    </div>
+  )
+}
 
 const VALID_TABS = ["dashboard", "expenses", "optimizer"] as const
 type TabValue = (typeof VALID_TABS)[number]
@@ -83,15 +105,21 @@ function AuthenticatedApp() {
           </TabsList>
 
           <TabsContent value="dashboard">
-            <Dashboard />
+            <Suspense fallback={<TabSkeleton />}>
+              <Dashboard />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="expenses">
-            <ExpenseTable />
+            <Suspense fallback={<TabSkeleton />}>
+              <ExpenseTable />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="optimizer">
-            <Optimizer />
+            <Suspense fallback={<TabSkeleton />}>
+              <Optimizer />
+            </Suspense>
           </TabsContent>
         </Tabs>
       </div>
