@@ -5,7 +5,12 @@ import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 import { version } from "./package.json"
 
-const commitHash = execSync("git rev-parse --short HEAD").toString().trim()
+let commitHash = "unknown"
+try {
+  commitHash = execSync("git rev-parse --short HEAD").toString().trim()
+} catch {
+  // Git unavailable or not a git repo — use fallback
+}
 
 // https://vite.dev/config/
 export default defineConfig({

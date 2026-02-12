@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ErrorBoundary } from "@/components/shared/error-boundary"
 import { SignIn } from "@/components/auth/sign-in"
 import { AuthLoading as AuthLoadingScreen } from "@/components/auth/auth-loading"
 import { LayoutDashboard, Receipt, Calculator, LogOut } from "lucide-react"
@@ -105,21 +106,27 @@ function AuthenticatedApp() {
           </TabsList>
 
           <TabsContent value="dashboard">
-            <Suspense fallback={<TabSkeleton />}>
-              <Dashboard />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<TabSkeleton />}>
+                <Dashboard />
+              </Suspense>
+            </ErrorBoundary>
           </TabsContent>
 
           <TabsContent value="expenses">
-            <Suspense fallback={<TabSkeleton />}>
-              <ExpenseTable />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<TabSkeleton />}>
+                <ExpenseTable />
+              </Suspense>
+            </ErrorBoundary>
           </TabsContent>
 
           <TabsContent value="optimizer">
-            <Suspense fallback={<TabSkeleton />}>
-              <Optimizer />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<TabSkeleton />}>
+                <Optimizer />
+              </Suspense>
+            </ErrorBoundary>
           </TabsContent>
         </Tabs>
       </div>
