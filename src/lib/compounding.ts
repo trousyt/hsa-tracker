@@ -190,3 +190,38 @@ export function filterYTD(
     totalInvestedCents: result.totalInvestedCents,
   }
 }
+
+/**
+ * Filter compounding data to a recent window (e.g., last 6 or 12 months).
+ *
+ * Shows gains earned within the window only (subtracts baseline at window start).
+ */
+export function filterRecentMonths(
+  result: CompoundingResult,
+  months: number
+): CompoundingResult {
+  const now = new Date()
+  const startDate = new Date(now.getFullYear(), now.getMonth() - months, 1)
+  const startMonth = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}`
+
+  // Find the baseline: the data point just before the window starts
+  const beforeStart = result.dataPoints
+    .filter((dp) => dp.month < startMonth)
+  const baselinePoint = beforeStart[beforeStart.length - 1]
+  const baselineGain = baselinePoint?.cumulativeGainCents ?? 0
+
+  const filteredPoints = result.dataPoints
+    .filter((dp) => dp.month >= startMonth)
+    .map((dp) => ({
+      month: dp.month,
+      cumulativeGainCents: dp.cumulativeGainCents - baselineGain,
+    }))
+
+  const lastPoint = filteredPoints[filteredPoints.length - 1]
+
+  return {
+    dataPoints: filteredPoints,
+    totalGainCents: lastPoint?.cumulativeGainCents ?? 0,
+    totalInvestedCents: result.totalInvestedCents,
+  }
+}

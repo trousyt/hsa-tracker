@@ -111,7 +111,7 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand }: Monthly
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Monthly Out-of-Pocket Spending</CardTitle>
+          <CardTitle className="text-base">Out-of-pocket Spending</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground py-8 text-center">
@@ -122,7 +122,7 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand }: Monthly
     )
   }
 
-  const chartHeight = expanded ? "h-[350px]" : "h-[160px]"
+  const chartHeight = expanded ? "!h-[350px] !aspect-auto" : "!h-[160px] !aspect-auto"
   const ranges: { key: TimeRange; label: string }[] = [
     { key: "all", label: "All" },
     { key: "1y", label: "1Y" },
@@ -130,11 +130,30 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand }: Monthly
     { key: "ytd", label: "YTD" },
   ]
 
+  const totalCents = chartData.reduce((sum, d) => sum + d.totalCents, 0)
+  const subtitleByRange: Record<TimeRange, string> = {
+    all: "spent all time",
+    "1y": "spent last year",
+    "6mo": "spent last 6 months",
+    ytd: "spent year to date",
+  }
+
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-base">Monthly Out-of-Pocket Spending</CardTitle>
-        <div className="flex items-center gap-2">
+      <CardHeader className="pb-2">
+        <div className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle className="text-base">Out-of-pocket Spending</CardTitle>
+            <div className="mt-2" aria-live="polite">
+              <p className="text-2xl font-bold tracking-tight">
+                {formatCurrency(totalCents)}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {subtitleByRange[range]}
+              </p>
+            </div>
+          </div>
+        <div className="flex items-center gap-2 shrink-0">
           <div className="flex gap-1" role="group" aria-label="Time range">
             {ranges.map((r) => (
               <button
@@ -160,13 +179,14 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand }: Monthly
               {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
             </button>
           )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
         <ChartContainer
           config={chartConfig}
           className={`${chartHeight} w-full`}
-          aria-label="Monthly out-of-pocket medical spending bar chart"
+          aria-label="Out-of-pocket medical spending bar chart"
         >
           <BarChart accessibilityLayer data={chartData}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
