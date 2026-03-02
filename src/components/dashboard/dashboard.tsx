@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { useQuery } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import {
@@ -18,6 +19,7 @@ export function Dashboard() {
   const summary = useQuery(api.expenses.getSummary)
   const ocrUsage = useQuery(api.ocr.getCurrentUsage)
   const chartData = useQuery(api.charts.getChartData)
+  const [expandedChart, setExpandedChart] = useState<"spending" | "compounding" | null>(null)
 
   if (summary === undefined) {
     return (
@@ -30,11 +32,15 @@ export function Dashboard() {
             />
           ))}
         </div>
-        <div className="h-[320px] rounded-lg border bg-muted/30 animate-pulse" />
-        <div className="h-[380px] rounded-lg border bg-muted/30 animate-pulse" />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="h-[280px] rounded-lg border bg-muted/30 animate-pulse" />
+          <div className="h-[280px] rounded-lg border bg-muted/30 animate-pulse" />
+        </div>
       </div>
     )
   }
+
+  const isExpanded = expandedChart !== null
 
   return (
     <div className="space-y-6">
@@ -107,15 +113,31 @@ export function Dashboard() {
       )}
 
       {chartData ? (
-        <>
-          <MonthlySpendingChart data={chartData.monthlySpending} />
-          <CompoundingSavingsChart data={chartData.compoundingData} />
-        </>
+        <div className={isExpanded ? "space-y-4" : "grid gap-4 lg:grid-cols-2"}>
+          {(!isExpanded || expandedChart === "spending") && (
+            <MonthlySpendingChart
+              data={chartData.monthlySpending}
+              expanded={expandedChart === "spending"}
+              onToggleExpand={() =>
+                setExpandedChart(expandedChart === "spending" ? null : "spending")
+              }
+            />
+          )}
+          {(!isExpanded || expandedChart === "compounding") && (
+            <CompoundingSavingsChart
+              data={chartData.compoundingData}
+              expanded={expandedChart === "compounding"}
+              onToggleExpand={() =>
+                setExpandedChart(expandedChart === "compounding" ? null : "compounding")
+              }
+            />
+          )}
+        </div>
       ) : (
-        <>
-          <div className="h-[320px] rounded-lg border bg-muted/30 animate-pulse" />
-          <div className="h-[380px] rounded-lg border bg-muted/30 animate-pulse" />
-        </>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="h-[280px] rounded-lg border bg-muted/30 animate-pulse" />
+          <div className="h-[280px] rounded-lg border bg-muted/30 animate-pulse" />
+        </div>
       )}
     </div>
   )

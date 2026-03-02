@@ -6,6 +6,7 @@ import {
   ChartTooltip,
 } from "@/components/ui/chart"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Maximize2, Minimize2 } from "lucide-react"
 import { formatCurrency, formatCurrencyShort } from "@/lib/currency"
 import {
   calculateCompounding,
@@ -15,6 +16,8 @@ import {
 
 interface CompoundingSavingsChartProps {
   data: CompoundingExpense[]
+  expanded?: boolean
+  onToggleExpand?: () => void
 }
 
 const chartConfig = {
@@ -55,7 +58,7 @@ function formatMonthFull(month: string): string {
   return `${monthNames[parseInt(monthStr, 10) - 1]} ${yearStr}`
 }
 
-export function CompoundingSavingsChart({ data }: CompoundingSavingsChartProps) {
+export function CompoundingSavingsChart({ data, expanded, onToggleExpand }: CompoundingSavingsChartProps) {
   const [view, setView] = useState<"all" | "ytd">("all")
 
   const fullResult = useMemo(() => calculateCompounding(data), [data])
@@ -95,6 +98,8 @@ export function CompoundingSavingsChart({ data }: CompoundingSavingsChartProps) 
     )
   }
 
+  const chartHeight = expanded ? "h-[350px]" : "h-[160px]"
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -112,29 +117,40 @@ export function CompoundingSavingsChart({ data }: CompoundingSavingsChartProps) 
               </p>
             </div>
           </div>
-          <div className="flex gap-1 shrink-0" role="group" aria-label="Time view">
-            <button
-              onClick={() => setView("all")}
-              className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                view === "all"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-              aria-pressed={view === "all"}
-            >
-              All-Time
-            </button>
-            <button
-              onClick={() => setView("ytd")}
-              className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                view === "ytd"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-              aria-pressed={view === "ytd"}
-            >
-              YTD
-            </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex gap-1" role="group" aria-label="Time view">
+              <button
+                onClick={() => setView("all")}
+                className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                  view === "all"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+                aria-pressed={view === "all"}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setView("ytd")}
+                className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                  view === "ytd"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+                aria-pressed={view === "ytd"}
+              >
+                YTD
+              </button>
+            </div>
+            {onToggleExpand && (
+              <button
+                onClick={onToggleExpand}
+                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+                aria-label={expanded ? "Minimize chart" : "Maximize chart"}
+              >
+                {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+              </button>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -150,7 +166,7 @@ export function CompoundingSavingsChart({ data }: CompoundingSavingsChartProps) 
         ) : (
           <ChartContainer
             config={chartConfig}
-            className="min-h-[250px] w-full"
+            className={`${chartHeight} w-full`}
             aria-label={`HSA compounding savings ${view === "ytd" ? "year to date" : "all time"} area chart`}
           >
             <AreaChart accessibilityLayer data={chartData}>

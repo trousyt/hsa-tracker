@@ -6,6 +6,7 @@ import {
   ChartTooltip,
 } from "@/components/ui/chart"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Maximize2, Minimize2 } from "lucide-react"
 import { formatCurrency, formatCurrencyShort } from "@/lib/currency"
 import { generateMonthRange } from "@/lib/compounding"
 
@@ -17,7 +18,11 @@ interface MonthlySpendingData {
 
 interface MonthlySpendingChartProps {
   data: MonthlySpendingData[]
+  expanded?: boolean
+  onToggleExpand?: () => void
 }
+
+type TimeRange = "6mo" | "ytd" | "1y" | "all"
 
 const chartConfig = {
   totalCents: {
@@ -52,8 +57,8 @@ function formatMonthFull(month: string): string {
   return `${monthNames[monthIndex]} ${yearStr}`
 }
 
-export function MonthlySpendingChart({ data }: MonthlySpendingChartProps) {
-  const [showAll, setShowAll] = useState(false)
+export function MonthlySpendingChart({ data, expanded, onToggleExpand }: MonthlySpendingChartProps) {
+  const [range, setRange] = useState<TimeRange>("6mo")
 
   const chartData = useMemo(() => {
     if (data.length === 0) return []
@@ -66,14 +71,26 @@ export function MonthlySpendingChart({ data }: MonthlySpendingChartProps) {
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
 
     let startMonth: string
-    if (showAll) {
-      // Find earliest month in data
-      const sorted = [...data].sort((a, b) => a.month.localeCompare(b.month))
-      startMonth = sorted[0].month
-    } else {
-      // Last 12 months
-      const d = new Date(now.getFullYear(), now.getMonth() - 11, 1)
-      startMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    switch (range) {
+      case "ytd":
+        startMonth = `${now.getFullYear()}-01`
+        break
+      case "1y": {
+        const d = new Date(now.getFullYear() - 1, now.getMonth(), 1)
+        startMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+        break
+      }
+      case "all": {
+        const sorted = [...data].sort((a, b) => a.month.localeCompare(b.month))
+        startMonth = sorted[0].month
+        break
+      }
+      case "6mo":
+      default: {
+        const d = new Date(now.getFullYear(), now.getMonth() - 5, 1)
+        startMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+        break
+      }
     }
 
     // Generate full range with zero-fill
@@ -88,7 +105,7 @@ export function MonthlySpendingChart({ data }: MonthlySpendingChartProps) {
         expenseCount: entry?.expenseCount ?? 0,
       }
     })
-  }, [data, showAll])
+  }, [data, range])
 
   if (data.length === 0) {
     return (
@@ -105,39 +122,50 @@ export function MonthlySpendingChart({ data }: MonthlySpendingChartProps) {
     )
   }
 
+  const chartHeight = expanded ? "h-[350px]" : "h-[160px]"
+  const ranges: { key: TimeRange; label: string }[] = [
+    { key: "all", label: "All" },
+    { key: "1y", label: "1Y" },
+    { key: "6mo", label: "6M" },
+    { key: "ytd", label: "YTD" },
+  ]
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-base">Monthly Out-of-Pocket Spending</CardTitle>
-        <div className="flex gap-1" role="group" aria-label="Time range">
-          <button
-            onClick={() => setShowAll(false)}
-            className={`px-3 py-1 text-xs rounded-md transition-colors ${
-              !showAll
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            }`}
-            aria-pressed={!showAll}
-          >
-            Last 12 Months
-          </button>
-          <button
-            onClick={() => setShowAll(true)}
-            className={`px-3 py-1 text-xs rounded-md transition-colors ${
-              showAll
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            }`}
-            aria-pressed={showAll}
-          >
-            All
-          </button>
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1" role="group" aria-label="Time range">
+            {ranges.map((r) => (
+              <button
+                key={r.key}
+                onClick={() => setRange(r.key)}
+                className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                  range === r.key
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+                aria-pressed={range === r.key}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+          {onToggleExpand && (
+            <button
+              onClick={onToggleExpand}
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+              aria-label={expanded ? "Minimize chart" : "Maximize chart"}
+            >
+              {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+            </button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
         <ChartContainer
           config={chartConfig}
-          className="min-h-[250px] w-full"
+          className={`${chartHeight} w-full`}
           aria-label="Monthly out-of-pocket medical spending bar chart"
         >
           <BarChart accessibilityLayer data={chartData}>
@@ -148,7 +176,7 @@ export function MonthlySpendingChart({ data }: MonthlySpendingChartProps) {
               tickMargin={10}
               axisLine={false}
               fontSize={11}
-              interval={chartData.length > 18 ? Math.floor(chartData.length / 12) : 0}
+              interval="preserveStartEnd"
             />
             <YAxis
               tickLine={false}
