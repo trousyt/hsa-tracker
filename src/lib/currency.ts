@@ -39,6 +39,30 @@ export function formatDollars(dollars: number): string {
 }
 
 /**
+ * Format cents as an abbreviated currency string for chart axes.
+ * Under $1K: "$850", $1K-$999K: "$1.2K", $1M+: "$1.2M"
+ */
+export function formatCurrencyShort(cents: number): string {
+  const dollars = Math.abs(centsToDollars(cents))
+  const sign = cents < 0 ? "-" : ""
+
+  if (dollars < 1000) {
+    return `${sign}$${Math.round(dollars)}`
+  }
+  if (dollars < 1_000_000) {
+    const k = dollars / 1000
+    const kRounded = Math.round(k * 10) / 10
+    if (kRounded < 1000) {
+      return `${sign}$${kRounded % 1 === 0 ? kRounded.toFixed(0) : kRounded.toFixed(1)}K`
+    }
+    // Boundary: rounding pushed K to 1000+, fall through to M
+  }
+  const m = dollars / 1_000_000
+  const mRounded = Math.round(m * 10) / 10
+  return `${sign}$${mRounded % 1 === 0 ? mRounded.toFixed(0) : mRounded.toFixed(1)}M`
+}
+
+/**
  * Parse a currency input string to cents
  * Handles formats like: "25.50", "$25.50", "25", "25.5"
  */

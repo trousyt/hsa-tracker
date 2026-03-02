@@ -1,6 +1,6 @@
 import { parseCurrencyToCents } from "./currency"
 import { formatLocalDate } from "./dates"
-import type { Id } from "../../convex/_generated/dataModel"
+import type { Id } from "@convex/_generated/dataModel"
 import {
   isValidCategory,
   EXPENSE_CATEGORY_VALUES,

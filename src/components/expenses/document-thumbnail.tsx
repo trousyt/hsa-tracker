@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { FileText, ArrowUpRight } from "lucide-react"
 import { useSecureFileUrl } from "@/lib/secure-file"
-import type { Id } from "../../../convex/_generated/dataModel"
+import type { Id } from "@convex/_generated/dataModel"
 
 interface DocumentThumbnailProps {
   documentId: Id<"documents">
