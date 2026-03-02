@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { useQuery } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import {
@@ -10,24 +11,36 @@ import {
 } from "lucide-react"
 
 import { SummaryCard } from "./summary-card"
+import { MonthlySpendingChart } from "./monthly-spending-chart"
+import { CompoundingSavingsChart } from "./compounding-savings-chart"
 import { formatCurrency } from "@/lib/currency"
 
 export function Dashboard() {
   const summary = useQuery(api.expenses.getSummary)
   const ocrUsage = useQuery(api.ocr.getCurrentUsage)
+  const chartData = useQuery(api.charts.getChartData)
+  const [expandedChart, setExpandedChart] = useState<"spending" | "compounding" | null>(null)
 
   if (summary === undefined) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className="h-32 rounded-lg border bg-muted/30 animate-pulse"
-          />
-        ))}
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="h-32 rounded-lg border bg-muted/30 animate-pulse"
+            />
+          ))}
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="h-[280px] rounded-lg border bg-muted/30 animate-pulse" />
+          <div className="h-[280px] rounded-lg border bg-muted/30 animate-pulse" />
+        </div>
       </div>
     )
   }
+
+  const isExpanded = expandedChart !== null
 
   return (
     <div className="space-y-6">
@@ -96,6 +109,34 @@ export function Dashboard() {
             {ocrUsage.pagesProcessed !== 1 ? "s" : ""} (~
             {formatCurrency(ocrUsage.estimatedCostCents)})
           </span>
+        </div>
+      )}
+
+      {chartData ? (
+        <div className={isExpanded ? "space-y-4" : "grid gap-4 lg:grid-cols-2"}>
+          {(!isExpanded || expandedChart === "spending") && (
+            <MonthlySpendingChart
+              data={chartData.monthlySpending}
+              expanded={expandedChart === "spending"}
+              onToggleExpand={() =>
+                setExpandedChart(expandedChart === "spending" ? null : "spending")
+              }
+            />
+          )}
+          {(!isExpanded || expandedChart === "compounding") && (
+            <CompoundingSavingsChart
+              data={chartData.compoundingData}
+              expanded={expandedChart === "compounding"}
+              onToggleExpand={() =>
+                setExpandedChart(expandedChart === "compounding" ? null : "compounding")
+              }
+            />
+          )}
+        </div>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="h-[280px] rounded-lg border bg-muted/30 animate-pulse" />
+          <div className="h-[280px] rounded-lg border bg-muted/30 animate-pulse" />
         </div>
       )}
     </div>
