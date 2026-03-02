@@ -108,7 +108,7 @@ export function CompoundingSavingsChart({ data, expanded, onToggleExpand, range,
     )
   }
 
-  const chartHeight = expanded ? "!h-[65vh] !aspect-auto" : "!h-[160px] !aspect-auto"
+  const chartHeight = expanded ? "!h-[50vh] !aspect-auto" : "!h-[160px] !aspect-auto"
   const ranges: { key: TimeRange; label: string }[] = [
     { key: "all", label: "All" },
     { key: "5y", label: "5Y" },
@@ -217,6 +217,7 @@ export function CompoundingSavingsChart({ data, expanded, onToggleExpand, range,
                 width={50}
               />
               <ChartTooltip
+                animationDuration={150}
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null
                   const item = payload[0].payload as (typeof chartData)[0]
@@ -240,6 +241,7 @@ export function CompoundingSavingsChart({ data, expanded, onToggleExpand, range,
                 strokeWidth={2}
                 fill="url(#gainsFill)"
                 dot={false}
+                isAnimationActive={false}
               />
             </AreaChart>
           </ChartContainer>

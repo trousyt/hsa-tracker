@@ -127,7 +127,7 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand, range, on
     )
   }
 
-  const chartHeight = expanded ? "!h-[65vh] !aspect-auto" : "!h-[160px] !aspect-auto"
+  const chartHeight = expanded ? "!h-[50vh] !aspect-auto" : "!h-[160px] !aspect-auto"
   const ranges: { key: TimeRange; label: string }[] = [
     { key: "all", label: "All" },
     { key: "5y", label: "5Y" },
@@ -214,6 +214,7 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand, range, on
               width={50}
             />
             <ChartTooltip
+              animationDuration={150}
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null
                 const item = payload[0].payload as (typeof chartData)[0]
@@ -233,6 +234,7 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand, range, on
             <Bar
               dataKey="totalCents"
               fill="var(--color-totalCents)"
+              isAnimationActive={false}
               radius={[4, 4, 0, 0]}
             />
           </BarChart>

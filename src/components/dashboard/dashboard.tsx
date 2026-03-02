@@ -126,7 +126,7 @@ export function Dashboard() {
       )}
 
       <Dialog open={expandedChart !== null} onOpenChange={(open) => { if (!open) setExpandedChart(null) }}>
-        <DialogContent className="sm:max-w-[90vw] max-h-[85vh] p-0" showCloseButton={false}>
+        <DialogContent className="sm:max-w-[70vw] max-h-[70vh] p-0" showCloseButton={false}>
           <DialogTitle className="sr-only">
             {expandedChart === "spending" ? "Out-of-pocket Spending" : "Compounding Savings"}
           </DialogTitle>
