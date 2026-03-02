@@ -54,7 +54,7 @@ This is the core value proposition of the HSA tracker: pay expenses out of pocke
 
 ### Layout
 
-```
+```text
 ┌────────┐┌────────┐┌────────┐┌────────┐
 │ Total  ││Unreimb ││Reimbsd ││ Status │  (existing cards)
 └────────┘└────────┘└────────┘└────────┘
@@ -120,7 +120,7 @@ A pure utility function that takes the raw compounding data and computes gains a
 
 Use a running portfolio balance that grows monthly. Expenses add to the balance; reimbursements withdraw from it. Gains earned in earlier months continue compounding.
 
-```
+```text
 monthlyRate = (1.10)^(1/12) - 1 ≈ 0.007974
 
 Build a timeline of events sorted by date:
