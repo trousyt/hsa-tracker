@@ -70,6 +70,8 @@ describe("formatCurrencyShort", () => {
     expect(formatCurrencyShort(125000)).toBe("$1.3K") // rounds to 1 decimal
     expect(formatCurrencyShort(1000000)).toBe("$10K")
     expect(formatCurrencyShort(99900000)).toBe("$999K")
+    // Boundary: $999,950 rounds to 1000.0K, should switch to $1M
+    expect(formatCurrencyShort(99995000)).toBe("$1M")
   })
 
   it("formats millions with M suffix", () => {

@@ -150,7 +150,7 @@ export function CompoundingSavingsChart({ data, expanded, onToggleExpand }: Comp
                 <button
                   key={r.key}
                   onClick={() => setRange(r.key)}
-                  className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                  className={`px-2 py-1 text-xs rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                     range === r.key
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -164,7 +164,7 @@ export function CompoundingSavingsChart({ data, expanded, onToggleExpand }: Comp
             {onToggleExpand && (
               <button
                 onClick={onToggleExpand}
-                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 aria-label={expanded ? "Minimize chart" : "Maximize chart"}
               >
                 {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}

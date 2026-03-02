@@ -6,6 +6,8 @@
  * from the S&P 500 average annual return (10% nominal).
  */
 
+import { formatLocalDate, parseLocalDate } from "./dates"
+
 /** Annual return rate (S&P 500 average) */
 const ANNUAL_RATE = 0.10
 
@@ -69,11 +71,7 @@ export function generateMonthRange(startMonth: string, endMonth: string): string
  * Get today's date as "YYYY-MM-DD" in local time.
  */
 function todayISO(): string {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, "0")
-  const d = String(now.getDate()).padStart(2, "0")
-  return `${y}-${m}-${d}`
+  return formatLocalDate(new Date())
 }
 
 /**
@@ -198,9 +196,10 @@ export function filterYTD(
  */
 export function filterRecentMonths(
   result: CompoundingResult,
-  months: number
+  months: number,
+  asOfDate?: string
 ): CompoundingResult {
-  const now = new Date()
+  const now = asOfDate ? parseLocalDate(asOfDate) : new Date()
   const startDate = new Date(now.getFullYear(), now.getMonth() - months + 1, 1)
   const startMonth = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}`
 

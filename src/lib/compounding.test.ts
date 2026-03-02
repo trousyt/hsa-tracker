@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"
 import {
   calculateCompounding,
   filterYTD,
+  filterRecentMonths,
   generateMonthRange,
   MONTHLY_RATE,
   type CompoundingExpense,
@@ -283,5 +284,91 @@ describe("filterYTD", () => {
 
     // No baseline (no data before 2025), so YTD = full gains
     expect(ytdResult.totalGainCents).toBe(fullResult.totalGainCents)
+  })
+})
+
+// ============ filterRecentMonths Tests ============
+
+describe("filterRecentMonths", () => {
+  // Use a fixed dataset: 24 months of compounding from Jan 2024 to Dec 2025
+  const expenses: CompoundingExpense[] = [
+    {
+      datePaid: "2024-01-15",
+      amountCents: 100000, // $1,000
+      reimbursements: [],
+    },
+  ]
+  const fullResult = calculateCompounding(expenses, "2025-12-31")
+
+  it("returns exactly N months for a standard window", () => {
+    const result = filterRecentMonths(fullResult, 6, "2025-12-31")
+    expect(result.dataPoints).toHaveLength(6)
+    expect(result.dataPoints[0].month).toBe("2025-07")
+    expect(result.dataPoints[5].month).toBe("2025-12")
+  })
+
+  it("returns exactly 12 months for a 1-year window", () => {
+    const result = filterRecentMonths(fullResult, 12, "2025-12-31")
+    expect(result.dataPoints).toHaveLength(12)
+    expect(result.dataPoints[0].month).toBe("2025-01")
+    expect(result.dataPoints[11].month).toBe("2025-12")
+  })
+
+  it("returns 1 month for window=1", () => {
+    const result = filterRecentMonths(fullResult, 1, "2025-12-31")
+    expect(result.dataPoints).toHaveLength(1)
+    expect(result.dataPoints[0].month).toBe("2025-12")
+  })
+
+  it("clamps to available data when window exceeds total months", () => {
+    // Full dataset is 24 months, request 36
+    const result = filterRecentMonths(fullResult, 36, "2025-12-31")
+    expect(result.dataPoints).toHaveLength(24)
+    // No baseline to subtract, so gains match full result
+    expect(result.totalGainCents).toBe(fullResult.totalGainCents)
+  })
+
+  it("returns all data when window equals total months", () => {
+    const result = filterRecentMonths(fullResult, 24, "2025-12-31")
+    expect(result.dataPoints).toHaveLength(24)
+    expect(result.totalGainCents).toBe(fullResult.totalGainCents)
+  })
+
+  it("subtracts baseline so windowed gains are less than total", () => {
+    const result = filterRecentMonths(fullResult, 6, "2025-12-31")
+    expect(result.totalGainCents).toBeGreaterThan(0)
+    expect(result.totalGainCents).toBeLessThan(fullResult.totalGainCents)
+  })
+
+  it("first month gain equals cumulative gain minus baseline", () => {
+    const result = filterRecentMonths(fullResult, 6, "2025-12-31")
+
+    // Baseline is at 2025-06 (the month before the window)
+    const baseline = fullResult.dataPoints.find(
+      (dp) => dp.month === "2025-06"
+    )!
+    const firstInWindow = fullResult.dataPoints.find(
+      (dp) => dp.month === "2025-07"
+    )!
+
+    expect(result.dataPoints[0].cumulativeGainCents).toBe(
+      firstInWindow.cumulativeGainCents - baseline.cumulativeGainCents
+    )
+  })
+
+  it("month-boundary: window starting at Jan uses Dec of prior year as baseline", () => {
+    // 12-month window from Jan 2025 to Dec 2025
+    const result = filterRecentMonths(fullResult, 12, "2025-12-31")
+
+    const dec2024 = fullResult.dataPoints.find(
+      (dp) => dp.month === "2024-12"
+    )!
+    const jan2025 = fullResult.dataPoints.find(
+      (dp) => dp.month === "2025-01"
+    )!
+
+    expect(result.dataPoints[0].cumulativeGainCents).toBe(
+      jan2025.cumulativeGainCents - dec2024.cumulativeGainCents
+    )
   })
 })

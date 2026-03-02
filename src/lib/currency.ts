@@ -51,10 +51,15 @@ export function formatCurrencyShort(cents: number): string {
   }
   if (dollars < 1_000_000) {
     const k = dollars / 1000
-    return `${sign}$${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}K`
+    const kRounded = Math.round(k * 10) / 10
+    if (kRounded < 1000) {
+      return `${sign}$${kRounded % 1 === 0 ? kRounded.toFixed(0) : kRounded.toFixed(1)}K`
+    }
+    // Boundary: rounding pushed K to 1000+, fall through to M
   }
   const m = dollars / 1_000_000
-  return `${sign}$${m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)}M`
+  const mRounded = Math.round(m * 10) / 10
+  return `${sign}$${mRounded % 1 === 0 ? mRounded.toFixed(0) : mRounded.toFixed(1)}M`
 }
 
 /**

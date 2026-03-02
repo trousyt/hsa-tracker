@@ -164,7 +164,7 @@ Output: array of { month, cumulativeGainCents } for chart rendering.
 ### Performance
 
 - Monthly spending: Server-side aggregation is O(N) where N = number of expenses. Fast for typical personal use (<1000 expenses).
-- Compounding: Client-side calculation from raw data. O(N * M * T) worst case where N = expenses, M = avg reimbursements per expense, T = months span. For 100 expenses over 5 years: ~6000 iterations. Negligible.
+- Compounding: Client-side calculation from raw data. `O(N * M * T)` worst case where N = expenses, M = avg reimbursements per expense, T = months span. For 100 expenses over 5 years: ~6000 iterations. Negligible.
 - Both queries use Convex's reactive system -- charts update in real-time when expenses/reimbursements change.
 
 ### Currency Formatting in Charts
