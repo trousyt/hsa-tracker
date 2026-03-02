@@ -201,7 +201,7 @@ export function filterRecentMonths(
   months: number
 ): CompoundingResult {
   const now = new Date()
-  const startDate = new Date(now.getFullYear(), now.getMonth() - months, 1)
+  const startDate = new Date(now.getFullYear(), now.getMonth() - months + 1, 1)
   const startMonth = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}`
 
   // Find the baseline: the data point just before the window starts

@@ -76,7 +76,7 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand }: Monthly
         startMonth = `${now.getFullYear()}-01`
         break
       case "1y": {
-        const d = new Date(now.getFullYear() - 1, now.getMonth(), 1)
+        const d = new Date(now.getFullYear() - 1, now.getMonth() + 1, 1)
         startMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
         break
       }
