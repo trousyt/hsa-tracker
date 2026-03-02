@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import {
   type ChartConfig,
@@ -14,14 +14,15 @@ import {
   filterRecentMonths,
   type CompoundingExpense,
 } from "@/lib/compounding"
+import type { TimeRange } from "@/lib/chart-types"
 
 interface CompoundingSavingsChartProps {
   data: CompoundingExpense[]
   expanded?: boolean
   onToggleExpand?: () => void
+  range: TimeRange
+  onRangeChange: (r: TimeRange) => void
 }
-
-type TimeRange = "all" | "1y" | "6mo" | "ytd"
 
 const chartConfig = {
   cumulativeGainCents: {
@@ -31,22 +32,16 @@ const chartConfig = {
 } satisfies ChartConfig
 
 /**
- * Format "YYYY-MM" as "'24" for year labels, or "Jan '24" for shorter ranges.
+ * Format "YYYY-MM" as "Jan '24" for X-axis labels.
  */
-function formatAxisLabel(month: string, shortRange: boolean): string {
+function formatMonthLabel(month: string): string {
   const [yearStr, monthStr] = month.split("-")
-  if (shortRange) {
-    const monthNames = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-    ]
-    return monthNames[parseInt(monthStr, 10) - 1]
-  }
-  // For all-time / 1Y, show year markers
-  if (monthStr === "01") {
-    return `'${yearStr.slice(2)}`
-  }
-  return ""
+  const monthNames = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ]
+  const monthIndex = parseInt(monthStr, 10) - 1
+  return `${monthNames[monthIndex]} '${yearStr.slice(2)}`
 }
 
 /**
@@ -61,8 +56,7 @@ function formatMonthFull(month: string): string {
   return `${monthNames[parseInt(monthStr, 10) - 1]} ${yearStr}`
 }
 
-export function CompoundingSavingsChart({ data, expanded, onToggleExpand }: CompoundingSavingsChartProps) {
-  const [range, setRange] = useState<TimeRange>("all")
+export function CompoundingSavingsChart({ data, expanded, onToggleExpand, range, onRangeChange }: CompoundingSavingsChartProps) {
 
   const fullResult = useMemo(() => calculateCompounding(data), [data])
 
@@ -72,6 +66,8 @@ export function CompoundingSavingsChart({ data, expanded, onToggleExpand }: Comp
         return filterYTD(fullResult)
       case "1y":
         return filterRecentMonths(fullResult, 12)
+      case "5y":
+        return filterRecentMonths(fullResult, 60)
       case "6mo":
         return filterRecentMonths(fullResult, 6)
       case "all":
@@ -80,16 +76,14 @@ export function CompoundingSavingsChart({ data, expanded, onToggleExpand }: Comp
     }
   }, [fullResult, range])
 
-  const shortRange = range === "ytd" || range === "6mo"
-
   const chartData = useMemo(() => {
     return activeResult.dataPoints.map((dp) => ({
       month: dp.month,
-      label: formatAxisLabel(dp.month, shortRange),
+      label: formatMonthLabel(dp.month),
       fullLabel: formatMonthFull(dp.month),
       cumulativeGainCents: dp.cumulativeGainCents,
     }))
-  }, [activeResult, shortRange])
+  }, [activeResult])
 
   // Check if all expenses are fully reimbursed (no unreimbursed balance)
   const allReimbursed = data.length > 0 && data.every((expense) => {
@@ -103,7 +97,7 @@ export function CompoundingSavingsChart({ data, expanded, onToggleExpand }: Comp
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Compounding Savings</CardTitle>
+          <CardTitle className="text-xl">Compounding Savings</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground py-8 text-center">
@@ -114,9 +108,10 @@ export function CompoundingSavingsChart({ data, expanded, onToggleExpand }: Comp
     )
   }
 
-  const chartHeight = expanded ? "!h-[350px] !aspect-auto" : "!h-[160px] !aspect-auto"
+  const chartHeight = expanded ? "!h-[65vh] !aspect-auto" : "!h-[160px] !aspect-auto"
   const ranges: { key: TimeRange; label: string }[] = [
     { key: "all", label: "All" },
+    { key: "5y", label: "5Y" },
     { key: "1y", label: "1Y" },
     { key: "6mo", label: "6M" },
     { key: "ytd", label: "YTD" },
@@ -124,6 +119,7 @@ export function CompoundingSavingsChart({ data, expanded, onToggleExpand }: Comp
 
   const subtitleByRange: Record<TimeRange, string> = {
     all: "estimated savings all time",
+    "5y": "estimated savings last 5 years",
     "1y": "estimated savings last year",
     "6mo": "estimated savings last 6 mo",
     ytd: "estimated savings year to date",
@@ -134,9 +130,9 @@ export function CompoundingSavingsChart({ data, expanded, onToggleExpand }: Comp
       <CardHeader className="pb-2">
         <div className="flex flex-row items-start justify-between gap-4">
           <div>
-            <CardTitle className="text-base">Compounding Savings</CardTitle>
+            <CardTitle className="text-xl">Compounding Savings</CardTitle>
             <div className="mt-2" aria-live="polite">
-              <p className="text-2xl font-bold tracking-tight">
+              <p className="text-lg font-bold tracking-tight">
                 {formatCurrency(activeResult.totalGainCents)}
               </p>
               <p className="text-sm text-muted-foreground">
@@ -149,7 +145,7 @@ export function CompoundingSavingsChart({ data, expanded, onToggleExpand }: Comp
               {ranges.map((r) => (
                 <button
                   key={r.key}
-                  onClick={() => setRange(r.key)}
+                  onClick={() => onRangeChange(r.key)}
                   className={`px-2 py-1 text-xs rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                     range === r.key
                       ? "bg-primary text-primary-foreground"
@@ -210,7 +206,8 @@ export function CompoundingSavingsChart({ data, expanded, onToggleExpand }: Comp
                 tickMargin={10}
                 axisLine={false}
                 fontSize={11}
-                interval={shortRange ? 0 : "preserveStartEnd"}
+                interval="preserveStartEnd"
+                minTickGap={expanded ? 50 : 60}
               />
               <YAxis
                 tickLine={false}

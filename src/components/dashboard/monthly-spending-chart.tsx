@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import {
   type ChartConfig,
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Maximize2, Minimize2 } from "lucide-react"
 import { formatCurrency, formatCurrencyShort } from "@/lib/currency"
 import { generateMonthRange } from "@/lib/compounding"
+import type { TimeRange } from "@/lib/chart-types"
 
 interface MonthlySpendingData {
   month: string // "YYYY-MM"
@@ -20,9 +21,9 @@ interface MonthlySpendingChartProps {
   data: MonthlySpendingData[]
   expanded?: boolean
   onToggleExpand?: () => void
+  range: TimeRange
+  onRangeChange: (r: TimeRange) => void
 }
-
-type TimeRange = "6mo" | "ytd" | "1y" | "all"
 
 const chartConfig = {
   totalCents: {
@@ -57,8 +58,7 @@ function formatMonthFull(month: string): string {
   return `${monthNames[monthIndex]} ${yearStr}`
 }
 
-export function MonthlySpendingChart({ data, expanded, onToggleExpand }: MonthlySpendingChartProps) {
-  const [range, setRange] = useState<TimeRange>("6mo")
+export function MonthlySpendingChart({ data, expanded, onToggleExpand, range, onRangeChange }: MonthlySpendingChartProps) {
 
   const chartData = useMemo(() => {
     if (data.length === 0) return []
@@ -77,6 +77,11 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand }: Monthly
         break
       case "1y": {
         const d = new Date(now.getFullYear() - 1, now.getMonth() + 1, 1)
+        startMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+        break
+      }
+      case "5y": {
+        const d = new Date(now.getFullYear() - 5, now.getMonth() + 1, 1)
         startMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
         break
       }
@@ -111,7 +116,7 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand }: Monthly
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Out-of-pocket Spending</CardTitle>
+          <CardTitle className="text-xl">Out-of-pocket Spending</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground py-8 text-center">
@@ -122,9 +127,10 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand }: Monthly
     )
   }
 
-  const chartHeight = expanded ? "!h-[350px] !aspect-auto" : "!h-[160px] !aspect-auto"
+  const chartHeight = expanded ? "!h-[65vh] !aspect-auto" : "!h-[160px] !aspect-auto"
   const ranges: { key: TimeRange; label: string }[] = [
     { key: "all", label: "All" },
+    { key: "5y", label: "5Y" },
     { key: "1y", label: "1Y" },
     { key: "6mo", label: "6M" },
     { key: "ytd", label: "YTD" },
@@ -133,6 +139,7 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand }: Monthly
   const totalCents = chartData.reduce((sum, d) => sum + d.totalCents, 0)
   const subtitleByRange: Record<TimeRange, string> = {
     all: "spent all time",
+    "5y": "spent last 5 years",
     "1y": "spent last year",
     "6mo": "spent last 6 months",
     ytd: "spent year to date",
@@ -143,9 +150,9 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand }: Monthly
       <CardHeader className="pb-2">
         <div className="flex flex-row items-start justify-between gap-4">
           <div>
-            <CardTitle className="text-base">Out-of-pocket Spending</CardTitle>
+            <CardTitle className="text-xl">Out-of-pocket Spending</CardTitle>
             <div className="mt-2" aria-live="polite">
-              <p className="text-2xl font-bold tracking-tight">
+              <p className="text-lg font-bold tracking-tight">
                 {formatCurrency(totalCents)}
               </p>
               <p className="text-sm text-muted-foreground">
@@ -158,7 +165,7 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand }: Monthly
             {ranges.map((r) => (
               <button
                 key={r.key}
-                onClick={() => setRange(r.key)}
+                onClick={() => onRangeChange(r.key)}
                 className={`px-2 py-1 text-xs rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                   range === r.key
                     ? "bg-primary text-primary-foreground"
@@ -197,6 +204,7 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand }: Monthly
               axisLine={false}
               fontSize={11}
               interval="preserveStartEnd"
+              minTickGap={expanded ? 50 : 60}
             />
             <YAxis
               tickLine={false}
