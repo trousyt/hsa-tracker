@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react"
 import { useDropzone } from "react-dropzone"
 import { useMutation } from "convex/react"
-import { api } from "../../../convex/_generated/api"
-import type { Id } from "../../../convex/_generated/dataModel"
+import { api } from "@convex/_generated/api"
+import type { Id } from "@convex/_generated/dataModel"
 import { Upload, X, FileText, Image } from "lucide-react"
 import { toast } from "sonner"
 

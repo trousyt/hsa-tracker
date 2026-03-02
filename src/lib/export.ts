@@ -1,4 +1,4 @@
-import type { Doc } from "../../convex/_generated/dataModel"
+import type { Doc } from "@convex/_generated/dataModel"
 import { centsToDollars } from "./currency"
 import { formatLocalDate } from "./dates"
 import { getCategoryLabel } from "./constants/expense-categories"

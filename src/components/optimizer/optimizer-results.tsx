@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useMutation } from "convex/react"
-import { api } from "../../../convex/_generated/api"
-import type { Doc } from "../../../convex/_generated/dataModel"
+import { api } from "@convex/_generated/api"
+import type { Doc } from "@convex/_generated/dataModel"
 import { toast } from "sonner"
 import { CheckCircle, AlertCircle, Calendar, Building2 } from "lucide-react"
 

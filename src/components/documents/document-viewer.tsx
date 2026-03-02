@@ -4,7 +4,7 @@ import { FileText, Download, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSecureFileUrl } from "@/lib/secure-file"
 import { toast } from "sonner"
-import type { Id } from "../../../convex/_generated/dataModel"
+import type { Id } from "@convex/_generated/dataModel"
 
 interface DocumentViewerProps {
   document: {

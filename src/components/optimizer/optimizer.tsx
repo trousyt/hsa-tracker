@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react"
 import { useQuery } from "convex/react"
-import { api } from "../../../convex/_generated/api"
-import type { Doc } from "../../../convex/_generated/dataModel"
+import { api } from "@convex/_generated/api"
+import type { Doc } from "@convex/_generated/dataModel"
 import { Calculator, Info } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

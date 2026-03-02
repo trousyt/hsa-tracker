@@ -1,6 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table"
 import { MoreHorizontal, Pencil, Trash2, Eye, FileText, Sparkles, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
-import type { Doc } from "../../../convex/_generated/dataModel"
+import type { Doc } from "@convex/_generated/dataModel"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"

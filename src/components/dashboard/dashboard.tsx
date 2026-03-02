@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useQuery } from "convex/react"
-import { api } from "convex/_generated/api"
+import { api } from "@convex/_generated/api"
 import {
   DollarSign,
   Receipt,
@@ -126,7 +126,7 @@ export function Dashboard() {
       )}
 
       <Dialog open={expandedChart !== null} onOpenChange={(open) => { if (!open) setExpandedChart(null) }}>
-        <DialogContent className="sm:max-w-[70vw] max-h-[70vh] p-0 data-[state=open]:duration-150 data-[state=closed]:animate-none data-[state=closed]:!zoom-100" showCloseButton={false}>
+        <DialogContent className="sm:max-w-[70vw] max-h-[70vh] p-0" showCloseButton={false}>
           <DialogTitle className="sr-only">
             {expandedChart === "spending" ? "Out-of-pocket Spending" : "Compounding Savings"}
           </DialogTitle>
