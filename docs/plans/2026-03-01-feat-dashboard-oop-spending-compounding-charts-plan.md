@@ -184,7 +184,7 @@ Output: array of { month, cumulativeGainCents } for chart rendering.
 
 Per project requirements in CLAUDE.md:
 - `accessibilityLayer` prop on all Recharts chart components (enables keyboard navigation)
-- `aria-label` on chart container regions describing purpose (e.g., "Monthly out of pocket medical spending bar chart")
+- `aria-label` on chart container regions describing purpose (e.g., "Monthly out-of-pocket medical spending bar chart")
 - Visually hidden summary text for screen readers: "You spent $X total across Y months. Your highest spending month was Z."
 - Hero savings number uses `aria-live="polite"` so changes are announced
 - All interactive elements (time range toggles) have accessible names

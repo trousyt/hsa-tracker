@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Maximize2, Minimize2 } from "lucide-react"
 import { formatCurrency, formatCurrencyShort } from "@/lib/currency"
 import { generateMonthRange } from "@/lib/compounding"
-import type { TimeRange } from "@/lib/chart-types"
+import { type TimeRange, formatMonthLabel, formatMonthFull } from "@/lib/chart-types"
 
 interface MonthlySpendingData {
   month: string // "YYYY-MM"
@@ -32,31 +32,6 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-/**
- * Format "YYYY-MM" as "Jan '24" for X-axis labels.
- */
-function formatMonthLabel(month: string): string {
-  const [yearStr, monthStr] = month.split("-")
-  const monthNames = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-  ]
-  const monthIndex = parseInt(monthStr, 10) - 1
-  return `${monthNames[monthIndex]} '${yearStr.slice(2)}`
-}
-
-/**
- * Format "YYYY-MM" as "March 2024" for tooltip labels.
- */
-function formatMonthFull(month: string): string {
-  const [yearStr, monthStr] = month.split("-")
-  const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
-  ]
-  const monthIndex = parseInt(monthStr, 10) - 1
-  return `${monthNames[monthIndex]} ${yearStr}`
-}
 
 export function MonthlySpendingChart({ data, expanded, onToggleExpand, range, onRangeChange }: MonthlySpendingChartProps) {
 
