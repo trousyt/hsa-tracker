@@ -12,10 +12,10 @@ github_issue: "#14"
 
 Add two data visualizations to the dashboard to give users insight into their HSA strategy:
 
-1. **Monthly Out-of-Pocket Spending Bar Chart** -- Shows total expenses per month as a bar chart with a time range toggle (Last 12 Months / All).
-2. **HSA Compounding Savings Line Chart** -- Shows cumulative investment gains from keeping HSA funds invested (S&P 500 benchmark at 10% annual return), with a hero headline number and All-Time / YTD toggle.
+1. **Out-of-pocket Spending Bar Chart** -- Shows total expenses per month as a bar chart with time range toggles (All / 1Y / 6M / YTD), plus a hero headline showing total spent for the selected period.
+2. **Compounding Savings Area Chart** -- Shows cumulative investment gains from keeping HSA funds invested (S&P 500 benchmark at 10% annual return), with a hero headline number and matching time range toggles (All / 1Y / 6M / YTD).
 
-Both charts render full-width below the existing summary cards, stacked vertically.
+Both charts render side-by-side on desktop (lg:grid-cols-2) with maximize/minimize controls to expand individually to full width. On mobile, charts stack vertically.
 
 ## Problem Statement / Motivation
 
@@ -33,7 +33,7 @@ This is the core value proposition of the HSA tracker: pay expenses out of pocke
 - **Data**: All expenses grouped by `datePaid` month, summed by `amountCents`
 - **X-axis**: Month labels formatted as `"Jan '24"`, `"Feb '24"`, etc.
 - **Y-axis**: Dollar amounts, abbreviated for large values (`$1.2K`, `$15K`)
-- **Time range**: Toggle between "Last 12 Months" (default) and "All"
+- **Time range**: Toggle between All / 1Y / 6M (default) / YTD
 - **Zero-fill**: Months with no expenses show as $0 (no gaps)
 - **Tooltip**: On hover shows `"March 2026: $1,234.56"` with expense count
 - **Styling**: Light horizontal grid lines, single theme color from `--chart-1`
@@ -45,9 +45,10 @@ This is the core value proposition of the HSA tracker: pay expenses out of pocke
 - **Data**: For each unreimbursed expense, compute compound growth from `datePaid` to today at 10% annual return (compounded monthly). When partial reimbursements occur, reduce the compounding principal from the reimbursement date forward (precise piecewise tracking).
 - **X-axis**: Monthly time points, labeled as `"'23"`, `"'24"`, etc.
 - **Y-axis**: Dollar amounts (gains only, not principal)
-- **Time toggle**: "All-Time" (default) and "YTD"
-  - **All-Time**: Cumulative gains from the earliest expense to today
-  - **YTD**: Gains earned in the current calendar year from all unreimbursed expenses. Calculated as: `gain(datePaid → today) - gain(datePaid → Jan 1 of current year)` for each expense. Example: a $1,000 expense from 2023 that has gained $210 total but $65 of that is from Jan 1 2026 to today -- YTD shows $65.
+- **Time toggle**: All (default) / 1Y / 6M / YTD — mirrors the spending chart
+  - **All**: Cumulative gains from the earliest expense to today
+  - **1Y / 6M**: Gains earned within the last 12 or 6 months (subtracts baseline at window start via `filterRecentMonths()`)
+  - **YTD**: Gains earned in the current calendar year. Calculated as: `gain(datePaid → today) - gain(datePaid → Jan 1 of current year)` for each expense. Example: a $1,000 expense from 2023 that has gained $210 total but $65 of that is from Jan 1 2026 to today -- YTD shows $65.
 - **Disclaimer footnote**: `"*Based on 10% average annual S&P 500 return, compounded monthly. Hypothetical illustration."`
 - **Styling**: Smooth monotone line with subtle area fill beneath, theme color `--chart-2`
 
@@ -58,25 +59,20 @@ This is the core value proposition of the HSA tracker: pay expenses out of pocke
 │ Total  ││Unreimb ││Reimbsd ││ Status │  (existing cards)
 └────────┘└────────┘└────────┘└────────┘
 
-┌──────────────────────────────────────┐
-│ Monthly Out-of-Pocket Spending       │
-│ [Last 12 Months ▼]  [All]           │
-│  ▐█▌ ▐█▌    ▐█▌▐█▌▐█▌▐█▌ ▐█▌▐█▌    │
-│  ▐█▌ ▐█▌ ▐█▌▐█▌▐█▌▐█▌▐█▌ ▐█▌▐█▌▐█▌ │
-│  Mar  Apr May Jun Jul Aug ...    Feb │
-└──────────────────────────────────────┘
-
-┌──────────────────────────────────────┐
-│ HSA Compounding Savings              │
-│ You've earned $1,823.17              │
-│ by keeping your HSA invested         │
-│ [All-Time]  [YTD]                    │
-│          ╱╱╱╱╱╱╱╱╱╱╱                │
-│     ╱╱╱╱╱                            │
-│  ╱╱╱                                 │
-│  '23    '24    '25    '26            │
-│ *Based on 10% avg S&P 500 return     │
-└──────────────────────────────────────┘
+┌─────────────────┐┌─────────────────┐
+│ Out-of-pocket   ││ Compounding     │
+│ Spending        ││ Savings         │
+│ $1,030.76       ││ $50.48          │
+│ spent last 6 mo ││ estimated       │
+│ [All][1Y][6M]   ││ savings all time│
+│ [YTD] ⛶         ││ [All][1Y][6M]  │
+│ ▐█▌    ▐█▌▐█▌   ││ [YTD] ⛶        │
+│ ▐█▌ ▐█▌▐█▌▐█▌▐█▌││    ╱╱╱╱╱╱╱╱   │
+│ Oct Nov Dec Jan  ││  ╱╱╱           │
+│             Feb  ││ '25    '26     │
+│                  ││ *S&P 500 10%   │
+└─────────────────┘└─────────────────┘
+         (stacks vertically on mobile)
 ```
 
 ## Technical Considerations
@@ -208,14 +204,14 @@ Match the existing dashboard skeleton pattern (`dashboard.tsx:19-30`): show puls
 ### Functional
 
 - [x] Bar chart shows monthly OOP spending for all expenses grouped by `datePaid` month
-- [x] Bar chart defaults to last 12 months; "All" toggle shows full history
+- [x] Bar chart defaults to last 6 months; All / 1Y / 6M / YTD toggles control time range
 - [x] Months with no expenses appear as $0 bars (zero-filled)
 - [x] Hovering a bar shows tooltip with month name, dollar amount, and expense count
-- [x] Compounding chart shows a hero headline: `"You've earned $X by keeping your HSA invested"`
+- [x] Compounding chart shows a hero headline with estimated savings amount
 - [x] Compounding line shows cumulative investment gains over monthly intervals
 - [x] Compounding uses 10% annual return compounded monthly (S&P 500 benchmark)
 - [x] Partial reimbursements reduce the compounding principal from the exact reimbursement date
-- [x] Compounding chart has All-Time / YTD toggle; YTD shows gains earned in current calendar year
+- [x] Compounding chart has All / 1Y / 6M / YTD toggles mirroring the spending chart
 - [x] Disclaimer footnote below compounding chart about hypothetical returns
 - [x] Both charts update reactively when expenses or reimbursements are added/modified/deleted
 - [x] Empty states shown when no data available
