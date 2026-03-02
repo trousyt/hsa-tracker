@@ -10,21 +10,28 @@ import {
 } from "lucide-react"
 
 import { SummaryCard } from "./summary-card"
+import { MonthlySpendingChart } from "./monthly-spending-chart"
+import { CompoundingSavingsChart } from "./compounding-savings-chart"
 import { formatCurrency } from "@/lib/currency"
 
 export function Dashboard() {
   const summary = useQuery(api.expenses.getSummary)
   const ocrUsage = useQuery(api.ocr.getCurrentUsage)
+  const chartData = useQuery(api.charts.getChartData)
 
   if (summary === undefined) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className="h-32 rounded-lg border bg-muted/30 animate-pulse"
-          />
-        ))}
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="h-32 rounded-lg border bg-muted/30 animate-pulse"
+            />
+          ))}
+        </div>
+        <div className="h-[320px] rounded-lg border bg-muted/30 animate-pulse" />
+        <div className="h-[380px] rounded-lg border bg-muted/30 animate-pulse" />
       </div>
     )
   }
@@ -97,6 +104,18 @@ export function Dashboard() {
             {formatCurrency(ocrUsage.estimatedCostCents)})
           </span>
         </div>
+      )}
+
+      {chartData ? (
+        <>
+          <MonthlySpendingChart data={chartData.monthlySpending} />
+          <CompoundingSavingsChart data={chartData.compoundingData} />
+        </>
+      ) : (
+        <>
+          <div className="h-[320px] rounded-lg border bg-muted/30 animate-pulse" />
+          <div className="h-[380px] rounded-lg border bg-muted/30 animate-pulse" />
+        </>
       )}
     </div>
   )
