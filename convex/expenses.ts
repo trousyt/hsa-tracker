@@ -1,6 +1,8 @@
 import { v } from "convex/values"
 import { mutation, query } from "./_generated/server"
 import { requireAuth, getOptionalAuth } from "./lib/auth"
+import { validateExpenseFields } from "./lib/validation"
+import { MAX_BATCH_SIZE } from "./lib/constants"
 
 // List all expenses, sorted by date descending
 export const list = query({
@@ -71,6 +73,13 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const userId = await requireAuth(ctx)
 
+    validateExpenseFields({
+      amountCents: args.amountCents,
+      provider: args.provider,
+      datePaid: args.datePaid,
+      category: args.category,
+    })
+
     const expenseId = await ctx.db.insert("expenses", {
       userId,
       datePaid: args.datePaid,
@@ -101,6 +110,27 @@ export const createBatch = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await requireAuth(ctx)
+
+    if (args.expenses.length > MAX_BATCH_SIZE) {
+      // Log the attempt before rejecting
+      await ctx.db.insert("securityAuditLogs", {
+        userId,
+        action: "batch_limit_exceeded",
+        details: JSON.stringify({ requested: args.expenses.length, limit: MAX_BATCH_SIZE }),
+        timestamp: Date.now(),
+      })
+      throw new Error(`Cannot import more than ${MAX_BATCH_SIZE} expenses at once`)
+    }
+
+    // Validate all expenses before inserting any
+    for (const expense of args.expenses) {
+      validateExpenseFields({
+        amountCents: expense.amountCents,
+        provider: expense.provider,
+        datePaid: expense.datePaid,
+        category: expense.category,
+      })
+    }
 
     const ids = []
     for (const expense of args.expenses) {
@@ -140,6 +170,13 @@ export const update = mutation({
     if (!expense || expense.userId !== userId) {
       throw new Error("Expense not found")
     }
+
+    validateExpenseFields({
+      amountCents: updates.amountCents,
+      provider: updates.provider,
+      datePaid: updates.datePaid,
+      category: updates.category,
+    })
 
     // Filter out undefined values
     const filteredUpdates: Record<string, unknown> = {}
