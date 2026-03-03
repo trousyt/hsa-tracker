@@ -72,10 +72,12 @@ function AuthenticatedApp() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-6xl p-8">
+      <div className="mx-auto max-w-6xl p-4 sm:p-8">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-baseline gap-3">
-            <h1 className="text-3xl font-bold">HSA Expense Tracker</h1>
+            <h1 className="text-3xl font-bold">
+              HSA<span className="hidden sm:inline"> Expense Tracker</span>
+            </h1>
             <span className="text-sm text-muted-foreground">v{__APP_VERSION__}</span>
           </div>
           <Button
