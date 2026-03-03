@@ -123,7 +123,7 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand, range, on
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex flex-row items-start justify-between gap-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div>
             <CardTitle className="text-xl">Out-of-pocket Spending</CardTitle>
             <div className="mt-2" aria-live="polite">
