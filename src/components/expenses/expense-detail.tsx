@@ -205,7 +205,7 @@ export function ExpenseDetail({
 
             {/* OCR Data Available Banner */}
             {ocrData && !expense.ocrAcknowledged && (
-              <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+              <div className="flex flex-col gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-primary" />
                   <span className="text-sm">OCR data available from receipt</span>
