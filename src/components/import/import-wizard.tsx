@@ -346,15 +346,19 @@ export function ImportWizard({ onClose }: ImportWizardProps) {
         const { storageId } = await response.json()
 
         // Save document
-        const documentId = await saveDocument({
+        const result = await saveDocument({
           storageId,
           originalFilename: pf.file.name,
           mimeType: compressedFile.type,
           sizeBytes: compressedFile.size,
         })
 
+        if (!result.ocrScheduled) {
+          toast.warning(`OCR skipped for ${pf.file.name}: monthly limit reached`)
+        }
+
         // Link to expense
-        await addToExpense({ expenseId, documentId })
+        await addToExpense({ expenseId, documentId: result.documentId })
         attached++
       } catch (error) {
         console.error(`Failed to attach ${pf.file.name}:`, error)

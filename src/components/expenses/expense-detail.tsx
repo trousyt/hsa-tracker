@@ -74,6 +74,10 @@ export function ExpenseDetail({
           description: doc.ocrError || undefined,
         })
       }
+      if (doc?.ocrStatus === "skipped" && !shownOcrErrors.current.has(doc._id)) {
+        shownOcrErrors.current.add(doc._id)
+        toast.warning("OCR processing skipped: monthly limit reached")
+      }
     }
   }, [documents])
 
