@@ -6,8 +6,13 @@ import { internal } from "./_generated/api"
 const http = httpRouter()
 
 // CORS headers for cross-origin requests (frontend on localhost, API on convex.site)
+const siteUrl = process.env.SITE_URL
+if (!siteUrl) {
+  throw new Error("SITE_URL environment variable is required for CORS configuration")
+}
+
 const corsHeaders = {
-  "Access-Control-Allow-Origin": process.env.SITE_URL ?? "*",
+  "Access-Control-Allow-Origin": siteUrl,
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "Authorization, Content-Type",
 }
