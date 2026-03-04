@@ -182,6 +182,58 @@ describe("expenses", () => {
     })
   })
 
+  describe("input validation", () => {
+    test("create rejects negative amountCents", async () => {
+      const { authed } = await createAuthenticatedContext()
+
+      await expect(
+        authed.mutation(api.expenses.create, {
+          datePaid: "2026-01-15",
+          provider: "Dr. Smith",
+          amountCents: -100,
+        })
+      ).rejects.toThrow("positive integer")
+    })
+
+    test("create rejects empty provider", async () => {
+      const { authed } = await createAuthenticatedContext()
+
+      await expect(
+        authed.mutation(api.expenses.create, {
+          datePaid: "2026-01-15",
+          provider: "",
+          amountCents: 1000,
+        })
+      ).rejects.toThrow("cannot be empty")
+    })
+
+    test("create rejects invalid date format", async () => {
+      const { authed } = await createAuthenticatedContext()
+
+      await expect(
+        authed.mutation(api.expenses.create, {
+          datePaid: "01-15-2026",
+          provider: "Dr. Smith",
+          amountCents: 1000,
+        })
+      ).rejects.toThrow("YYYY-MM-DD")
+    })
+
+    test("createBatch rejects more than MAX_BATCH_SIZE items", async () => {
+      const { authed } = await createAuthenticatedContext()
+
+      const expenses = Array.from({ length: 501 }, (_, i) => ({
+        datePaid: "2026-01-15",
+        provider: `Provider ${i}`,
+        amountCents: 1000,
+      }))
+
+      await expect(
+        authed.mutation(api.expenses.createBatch, { expenses })
+      ).rejects.toThrow("Cannot import more than 500")
+    })
+  })
+
   describe("summary statistics", () => {
     test("getSummary returns correct totals", async () => {
       const { authed } = await createAuthenticatedContext()

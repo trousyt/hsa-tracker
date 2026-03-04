@@ -78,12 +78,17 @@ export function FileUploader({ expenseId, onUploadComplete }: FileUploaderProps)
 
       // Save document record
       updateFileProgress(index, { status: "saving", progress: 80 })
-      const documentId = await saveDocument({
+      const result = await saveDocument({
         storageId,
         originalFilename: file.name,
         mimeType: compressedFile.type,
         sizeBytes: compressedFile.size,
       })
+      const documentId = result.documentId
+
+      if (!result.ocrScheduled) {
+        toast.warning("OCR processing skipped: monthly limit reached")
+      }
 
       // Add to expense
       await addToExpense({ expenseId, documentId })

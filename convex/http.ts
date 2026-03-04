@@ -5,11 +5,27 @@ import { internal } from "./_generated/api"
 
 const http = httpRouter()
 
-// CORS headers for cross-origin requests (frontend on localhost, API on convex.site)
-const corsHeaders = {
-  "Access-Control-Allow-Origin": process.env.SITE_URL ?? "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Authorization, Content-Type",
+/**
+ * Build CORS headers using the SITE_URL environment variable.
+ * Falls back to empty string (blocks cross-origin) if not configured.
+ * Convex env vars are set via `npx convex env set SITE_URL <url>`.
+ */
+function getCorsHeaders() {
+  const raw = process.env.SITE_URL ?? ""
+  let origin = ""
+  if (raw && raw !== "*") {
+    try {
+      const parsed = new URL(raw)
+      origin = parsed.origin
+    } catch {
+      // Invalid URL — block cross-origin by leaving origin empty
+    }
+  }
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Authorization, Content-Type",
+  } as const
 }
 
 // Add Convex Auth routes
@@ -36,7 +52,7 @@ http.route({
     if (!documentId) {
       return new Response("Invalid document ID", {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+        headers: { ...getCorsHeaders(), "Content-Type": "text/plain" },
       })
     }
 
@@ -56,7 +72,7 @@ http.route({
       return new Response("Unauthorized", {
         status: 401,
         headers: {
-          ...corsHeaders,
+          ...getCorsHeaders(),
           "Content-Type": "text/plain",
           "WWW-Authenticate": "Bearer",
         },
@@ -87,7 +103,7 @@ http.route({
 
       return new Response("Forbidden", {
         status: 403,
-        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+        headers: { ...getCorsHeaders(), "Content-Type": "text/plain" },
       })
     }
 
@@ -106,7 +122,7 @@ http.route({
 
       return new Response("File not found", {
         status: 404,
-        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+        headers: { ...getCorsHeaders(), "Content-Type": "text/plain" },
       })
     }
 
@@ -123,7 +139,7 @@ http.route({
     return new Response(blob, {
       status: 200,
       headers: {
-        ...corsHeaders,
+        ...getCorsHeaders(),
         "Content-Type": document.mimeType,
         "Content-Disposition": `inline; filename="${encodeURIComponent(document.originalFilename)}"`,
         "Content-Length": document.sizeBytes.toString(),
@@ -144,7 +160,7 @@ http.route({
     return new Response(null, {
       status: 204,
       headers: {
-        ...corsHeaders,
+        ...getCorsHeaders(),
         "Access-Control-Max-Age": "86400",
       },
     })
