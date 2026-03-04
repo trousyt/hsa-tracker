@@ -272,7 +272,11 @@ export function ExpenseDialog({
         submittedSuccessfully.current = true
         // Mark OCR as acknowledged if data was pre-filled during creation
         if (localOcrData) {
-          await acknowledgeOcr({ id: expenseId })
+          try {
+            await acknowledgeOcr({ id: expenseId })
+          } catch (err) {
+            console.warn("Non-fatal: failed to acknowledge OCR for expense", expenseId, err)
+          }
         }
         toast.success("Expense created successfully")
       }
