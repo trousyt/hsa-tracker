@@ -52,6 +52,24 @@ export const updateOcrResults = internalMutation({
       ocrStatus: "completed",
       ocrExtractedData,
     })
+
+    // Reset ocrAcknowledged on owning expense when new OCR data has extractable fields.
+    // Linear scan over user's expenses is acceptable at personal-tracker scale (~<1000 expenses).
+    const { amount, date, provider } = ocrExtractedData
+    if (amount || date || provider) {
+      const doc = await ctx.db.get(documentId)
+      if (doc?.userId) {
+        const expenses = await ctx.db
+          .query("expenses")
+          .withIndex("by_user", (q) => q.eq("userId", doc.userId))
+          .collect()
+        for (const expense of expenses) {
+          if (expense.documentIds.includes(documentId) && expense.ocrAcknowledged) {
+            await ctx.db.patch(expense._id, { ocrAcknowledged: false })
+          }
+        }
+      }
+    }
   },
 })
 
