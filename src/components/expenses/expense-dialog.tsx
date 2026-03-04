@@ -267,7 +267,17 @@ export function ExpenseDialog({
         if (uploadedDocumentId) {
           await addToExpense({ expenseId, documentId: uploadedDocumentId })
         }
+        // Mark as successful BEFORE acknowledgeOcr so cleanup doesn't delete
+        // the already-attached document if acknowledgeOcr fails
         submittedSuccessfully.current = true
+        // Mark OCR as acknowledged if data was pre-filled during creation
+        if (localOcrData) {
+          try {
+            await acknowledgeOcr({ id: expenseId })
+          } catch (err) {
+            console.warn("Non-fatal: failed to acknowledge OCR for expense", expenseId, err)
+          }
+        }
         toast.success("Expense created successfully")
       }
       onOpenChange(false)
