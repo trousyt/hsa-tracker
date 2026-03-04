@@ -8,7 +8,7 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { cn } from "@/lib/utils"
+import { cn, getUserErrorMessage } from "@/lib/utils"
 import {
   compressImage,
   isValidFileType,
@@ -78,12 +78,14 @@ export function FileUploader({ expenseId, onUploadComplete }: FileUploaderProps)
 
       // Save document record
       updateFileProgress(index, { status: "saving", progress: 80 })
-      const documentId = await saveDocument({
+      const result = await saveDocument({
         storageId,
         originalFilename: file.name,
         mimeType: compressedFile.type,
         sizeBytes: compressedFile.size,
       })
+      // Handle both return shapes: plain ID or { documentId, ocrScheduled }
+      const documentId = typeof result === "string" ? result : result.documentId
 
       // Add to expense
       await addToExpense({ expenseId, documentId })
@@ -97,9 +99,10 @@ export function FileUploader({ expenseId, onUploadComplete }: FileUploaderProps)
         setUploadingFiles((files) => files.filter((_, i) => i !== index))
       }, 1500)
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Upload failed"
+      const message = getUserErrorMessage(error, "Upload failed")
       updateFileProgress(index, { status: "error", error: message })
       toast.error(message)
+      console.error("File upload error:", error)
     }
   }, [updateFileProgress, generateUploadUrl, saveDocument, addToExpense, expenseId, onUploadComplete])
 

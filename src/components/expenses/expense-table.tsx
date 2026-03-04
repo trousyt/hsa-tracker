@@ -27,7 +27,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Download, Upload, Search, Filter } from "lucide-react"
+import { Plus, Download, Upload, Search, Filter, MoreHorizontal } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
 
 import { Input } from "@/components/ui/input"
@@ -205,11 +211,11 @@ export function ExpenseTable() {
             />
           </div>
 
-          {/* Filters toggle - mobile only */}
+          {/* Filters toggle - shown below lg breakpoint */}
           <Button
             variant="outline"
             size="icon"
-            className="md:hidden"
+            className="lg:hidden"
             onClick={() => setShowFilters((prev) => !prev)}
             aria-label="Toggle filters"
             aria-expanded={showFilters}
@@ -217,12 +223,12 @@ export function ExpenseTable() {
             <Filter className="h-4 w-4" />
           </Button>
 
-          {/* Filters and utility buttons - hidden on mobile, visible on md+ */}
+          {/* Filters and utility buttons - hidden below lg, visible on lg+ */}
           <Select
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as StatusFilter)}
           >
-            <SelectTrigger className="hidden md:flex w-[150px]">
+            <SelectTrigger className="hidden lg:flex w-[150px]">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -236,7 +242,7 @@ export function ExpenseTable() {
             value={categoryFilter}
             onValueChange={(value) => setCategoryFilter(value as CategoryFilter)}
           >
-            <SelectTrigger className="hidden md:flex w-[180px]">
+            <SelectTrigger className="hidden lg:flex w-[180px]">
               <SelectValue placeholder="Filter by category" />
             </SelectTrigger>
             <SelectContent>
@@ -249,14 +255,33 @@ export function ExpenseTable() {
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={() => setShowImportWizard(true)} className="hidden md:inline-flex">
+          <Button variant="outline" onClick={() => setShowImportWizard(true)} className="hidden lg:inline-flex">
             <Upload className="mr-2 h-4 w-4" />
             Import
           </Button>
-          <Button variant="outline" onClick={handleExport} className="hidden md:inline-flex">
+          <Button variant="outline" onClick={handleExport} className="hidden lg:inline-flex">
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
+
+          {/* Actions overflow menu - shown below lg breakpoint */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="lg:hidden" aria-label="More actions">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowImportWizard(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExport}>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Add Expense - always visible */}
           <Button onClick={() => setCreateDialogOpen(true)}>
@@ -269,7 +294,7 @@ export function ExpenseTable() {
 
       {/* Mobile filter row - shown when filter toggle is active */}
       {showFilters && (
-        <div className="flex flex-wrap items-center gap-2 md:hidden">
+        <div className="flex flex-wrap items-center gap-2 lg:hidden">
           <Select
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as StatusFilter)}
@@ -301,14 +326,6 @@ export function ExpenseTable() {
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" onClick={() => setShowImportWizard(true)}>
-            <Upload className="mr-2 h-4 w-4" />
-            Import
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
         </div>
       )}
 

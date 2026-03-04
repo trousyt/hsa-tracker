@@ -17,7 +17,7 @@ import { ExpenseForm } from "./expense-form"
 import { dollarsToCents, centsToDollars } from "@/lib/currency"
 import { useSecureFile } from "@/lib/secure-file"
 import type { ExpenseFormData } from "@/lib/validations/expense"
-import { cn } from "@/lib/utils"
+import { cn, getUserErrorMessage } from "@/lib/utils"
 import { parseLocalDate, formatLocalDate } from "@/lib/dates"
 import {
   compressImage,
@@ -194,21 +194,24 @@ export function ExpenseDialog({
       // Save document record (triggers OCR)
       setUploadStatus("saving")
       setUploadProgress(90)
-      const documentId = await saveDocument({
+      const result = await saveDocument({
         storageId,
         originalFilename: file.name,
         mimeType: compressedFile.type,
         sizeBytes: compressedFile.size,
       })
+      // Handle both return shapes: plain ID or { documentId, ocrScheduled }
+      const documentId = typeof result === "string" ? result : result.documentId
 
       setUploadedDocumentId(documentId)
       setUploadStatus("done")
       setUploadProgress(100)
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Upload failed"
+      const message = getUserErrorMessage(error, "Upload failed")
       setUploadStatus("error")
       setUploadError(message)
       toast.error(message)
+      console.error("File upload error:", error)
     }
   }, [generateUploadUrl, saveDocument])
 
@@ -397,7 +400,7 @@ export function ExpenseDialog({
               {/* Mobile: collapsible preview toggle */}
               <button
                 type="button"
-                className="flex items-center justify-between w-full p-3 min-h-[44px] bg-muted/30 border-b text-sm font-medium md:hidden"
+                className="flex items-center justify-between w-full p-3 pr-10 min-h-[44px] bg-muted/30 border-b text-sm font-medium md:hidden"
                 onClick={() => setPreviewCollapsed((prev) => !prev)}
                 aria-expanded={!previewCollapsed}
                 aria-controls="preview-panel"

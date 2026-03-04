@@ -346,12 +346,14 @@ export function ImportWizard({ onClose }: ImportWizardProps) {
         const { storageId } = await response.json()
 
         // Save document
-        const documentId = await saveDocument({
+        const result = await saveDocument({
           storageId,
           originalFilename: pf.file.name,
           mimeType: compressedFile.type,
           sizeBytes: compressedFile.size,
         })
+        // Handle both return shapes: plain ID or { documentId, ocrScheduled }
+        const documentId = typeof result === "string" ? result : result.documentId
 
         // Link to expense
         await addToExpense({ expenseId, documentId })
