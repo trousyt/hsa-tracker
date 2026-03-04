@@ -97,13 +97,16 @@ See [`docs/testing-conventions.md`](docs/testing-conventions.md) for full testin
 - Database migrations that drop or truncate tables
 - `git reset --hard`, `git clean -f`, or other commands that discard changes
 - Deleting files or directories
+- **Never `taskkill` across all instances of an executable** (e.g., `taskkill //F //IM chrome.exe`). This kills the user's browser windows, not just automation processes. If a browser automation socket is stale, remove the socket file instead.
+
+**Browser automation must always use `--headed` mode** (`agent-browser --headed`). Headless sessions cannot authenticate via OAuth. Save screenshots to a temp directory (e.g., `/tmp/`), never to the project directory.
 
 When implementing destructive functionality: write the code, push/deploy it, then **stop and wait** for the user to decide when to run it.
 
 ## User Preferences
 
 - **Ask for information instead of using placeholders.** When you need specific information (URLs, credentials, names, etc.), ask the user directly rather than inserting placeholders or leaving manual steps.
-- **Always use git worktrees when executing work plans.** Create an isolated worktree before implementing changes to keep the main branch clean.
+- **Always use git worktrees when executing work plans.** Create an isolated worktree before implementing changes to keep the main branch clean. Always use the `/git-worktree` skill when creating, switching, or removing worktrees.
 
 ## Plans
 
