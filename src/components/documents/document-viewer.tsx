@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { FileText, Download, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSecureFileUrl } from "@/lib/secure-file"
+import { getUserErrorMessage } from "@/lib/utils"
 import { toast } from "sonner"
 import type { Id } from "@convex/_generated/dataModel"
 
@@ -56,7 +57,7 @@ export function DocumentViewer({ document, onClose }: DocumentViewerProps) {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load file")
+          setError(getUserErrorMessage(err, "Failed to load file"))
         }
       } finally {
         if (!cancelled) {
@@ -86,7 +87,7 @@ export function DocumentViewer({ document, onClose }: DocumentViewerProps) {
       await downloadFile(document.id, document.filename)
       toast.success("Download started")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Download failed")
+      toast.error(getUserErrorMessage(err, "Download failed"))
     }
   }
 
@@ -95,20 +96,19 @@ export function DocumentViewer({ document, onClose }: DocumentViewerProps) {
       <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
         <DialogTitle className="sr-only">{document.filename}</DialogTitle>
 
-        {/* Header */}
-        <div className="flex items-center gap-4 p-4 border-b">
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDownload}
-              disabled={loading}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
-          </div>
-          <h3 className="font-medium truncate flex-1">{document.filename}</h3>
+        {/* Header — pr-10 avoids overlap with the dialog close button */}
+        <div className="flex items-center gap-4 p-4 pr-10 border-b min-w-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownload}
+            disabled={loading}
+            className="shrink-0"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download
+          </Button>
+          <h3 className="font-medium truncate min-w-0">{document.filename}</h3>
         </div>
 
         {/* Content */}

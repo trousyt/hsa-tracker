@@ -8,7 +8,7 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { cn } from "@/lib/utils"
+import { cn, getUserErrorMessage } from "@/lib/utils"
 import {
   compressImage,
   isValidFileType,
@@ -102,9 +102,10 @@ export function FileUploader({ expenseId, onUploadComplete }: FileUploaderProps)
         setUploadingFiles((files) => files.filter((_, i) => i !== index))
       }, 1500)
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Upload failed"
+      const message = getUserErrorMessage(error, "Upload failed")
       updateFileProgress(index, { status: "error", error: message })
       toast.error(message)
+      console.error("File upload error:", error)
     }
   }, [updateFileProgress, generateUploadUrl, saveDocument, addToExpense, expenseId, onUploadComplete])
 

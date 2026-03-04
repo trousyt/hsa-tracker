@@ -4,7 +4,7 @@ import { useDropzone } from "react-dropzone"
 import { api } from "@convex/_generated/api"
 import type { Id } from "@convex/_generated/dataModel"
 import { toast } from "sonner"
-import { Sparkles, Upload, FileText, Image, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
+import { Sparkles, Upload, FileText, Image, Loader2, CheckCircle2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react"
 
 import {
   Dialog,
@@ -17,7 +17,7 @@ import { ExpenseForm } from "./expense-form"
 import { dollarsToCents, centsToDollars } from "@/lib/currency"
 import { useSecureFile } from "@/lib/secure-file"
 import type { ExpenseFormData } from "@/lib/validations/expense"
-import { cn } from "@/lib/utils"
+import { cn, getUserErrorMessage } from "@/lib/utils"
 import { parseLocalDate, formatLocalDate } from "@/lib/dates"
 import {
   compressImage,
@@ -75,6 +75,7 @@ export function ExpenseDialog({
   const [uploadedMimeType, setUploadedMimeType] = useState<string | null>(null)
   const [formKey, setFormKey] = useState(0)
   const [localOcrData, setLocalOcrData] = useState<OcrExtractedData | null>(null)
+  const [previewCollapsed, setPreviewCollapsed] = useState(true)
 
   // Field selection state - lives at dialog level to survive form remounts
   const [fieldSelections, setFieldSelections] = useState<OcrFieldSelections>(() => ({
@@ -129,6 +130,7 @@ export function ExpenseDialog({
       setUploadedFilename(null)
       setUploadedMimeType(null)
       setLocalOcrData(null)
+      setPreviewCollapsed(true)
       setFormKey((k) => k + 1)
       // Reset field selections for next open
       setFieldSelections({ amount: "ocr", datePaid: "ocr", provider: "ocr" })
@@ -211,10 +213,11 @@ export function ExpenseDialog({
       setUploadStatus("done")
       setUploadProgress(100)
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Upload failed"
+      const message = getUserErrorMessage(error, "Upload failed")
       setUploadStatus("error")
       setUploadError(message)
       toast.error(message)
+      console.error("File upload error:", error)
     }
   }, [generateUploadUrl, saveDocument])
 
@@ -359,8 +362,10 @@ export function ExpenseDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "p-0 gap-0 overflow-hidden max-h-[90vh]",
-          showPreview ? "sm:max-w-5xl" : "sm:max-w-[425px]"
+          "p-0 gap-0 overflow-hidden",
+          "max-h-[100dvh] max-w-full rounded-none border-0 top-0 left-0 translate-x-0 translate-y-0",
+          "md:max-h-[90vh] md:max-w-[calc(100%-2rem)] md:rounded-lg md:border md:top-[50%] md:left-[50%] md:translate-x-[-50%] md:translate-y-[-50%]",
+          showPreview ? "md:max-w-5xl" : "md:max-w-[425px]"
         )}
         onOpenAutoFocus={(e) => {
           if (showPreview) {
@@ -384,23 +389,48 @@ export function ExpenseDialog({
         )}
 
         <div className={cn(
-          "flex flex-col overflow-y-auto",
+          "flex flex-col h-[100dvh] md:h-auto overflow-y-auto",
           showPreview && "md:flex-row md:min-h-[500px] md:overflow-y-hidden"
         )}>
           {/* Left Panel: Document Preview (60%) */}
           {showPreview && (
             <>
-              {/* Skip link for keyboard users to bypass the PDF iframe */}
+              {/* Skip link for keyboard users */}
               <a
                 href="#expense-form-panel"
                 className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-2 focus:bg-background focus:border focus:rounded focus:m-2"
               >
                 Skip to expense form
               </a>
+
+              {/* Mobile: collapsible preview toggle */}
+              <button
+                type="button"
+                className="flex items-center justify-between w-full p-3 pr-10 min-h-[44px] bg-muted/30 border-b text-sm font-medium md:hidden"
+                onClick={() => setPreviewCollapsed((prev) => !prev)}
+                aria-expanded={!previewCollapsed}
+                aria-controls="preview-panel"
+              >
+                <span className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  View Receipt
+                </span>
+                {previewCollapsed ? (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                )}
+              </button>
+
               <div
+                id="preview-panel"
                 role="region"
                 aria-label="Document preview"
-                className="border-b md:border-b-0 md:border-r bg-muted/30 h-[40vh] md:h-auto md:w-3/5 overflow-auto"
+                className={cn(
+                  "border-b md:border-b-0 md:border-r bg-muted/30 overflow-auto",
+                  "md:h-auto md:w-3/5 md:block",
+                  previewCollapsed ? "hidden md:block" : "h-[40vh]"
+                )}
               >
                 {previewLoading ? (
                   <div className="flex items-center justify-center h-full">
@@ -441,8 +471,8 @@ export function ExpenseDialog({
             role="region"
             aria-label="Expense details form"
             className={cn(
-              "p-6 overflow-y-auto",
-              showPreview ? "md:w-2/5 md:max-h-[80vh]" : "w-full"
+              "p-6 overflow-y-auto flex-1",
+              showPreview ? "md:w-2/5 md:max-h-[80vh] md:flex-initial" : "w-full"
             )}
           >
             {/* Dialog title inside form panel for two-panel mode */}
@@ -549,7 +579,7 @@ export function ExpenseDialog({
                                       toast.warning("Still over monthly limit")
                                     }
                                   } catch (error) {
-                                    toast.error(error instanceof Error ? error.message : "OCR retry failed")
+                                    toast.error(getUserErrorMessage(error, "OCR retry failed"))
                                     console.error("OCR retry failed:", error)
                                   }
                                 }}

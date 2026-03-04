@@ -27,7 +27,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Download, Upload, Search } from "lucide-react"
+import { Plus, Download, Upload, Search, Filter, MoreHorizontal } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
 
 import { Input } from "@/components/ui/input"
@@ -67,6 +73,7 @@ export function ExpenseTable() {
     { id: "datePaid", desc: true },
   ])
   const [globalFilter, setGlobalFilter] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
 
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -190,23 +197,38 @@ export function ExpenseTable() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold">Expenses</h2>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Search - always visible */}
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search expenses..."
               value={globalFilter}
               onChange={(e) => setGlobalFilter(e.target.value)}
-              className="pl-8 w-[200px]"
+              className="pl-8 w-full sm:w-[200px]"
             />
           </div>
+
+          {/* Filters toggle - shown below lg breakpoint */}
+          <Button
+            variant="outline"
+            size="icon"
+            className="lg:hidden"
+            onClick={() => setShowFilters((prev) => !prev)}
+            aria-label="Toggle filters"
+            aria-expanded={showFilters}
+          >
+            <Filter className="h-4 w-4" />
+          </Button>
+
+          {/* Filters and utility buttons - hidden below lg, visible on lg+ */}
           <Select
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as StatusFilter)}
           >
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="hidden lg:flex w-[150px]">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -220,7 +242,7 @@ export function ExpenseTable() {
             value={categoryFilter}
             onValueChange={(value) => setCategoryFilter(value as CategoryFilter)}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="hidden lg:flex w-[180px]">
               <SelectValue placeholder="Filter by category" />
             </SelectTrigger>
             <SelectContent>
@@ -233,20 +255,79 @@ export function ExpenseTable() {
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={() => setShowImportWizard(true)}>
+          <Button variant="outline" onClick={() => setShowImportWizard(true)} className="hidden lg:inline-flex">
             <Upload className="mr-2 h-4 w-4" />
             Import
           </Button>
-          <Button variant="outline" onClick={handleExport}>
+          <Button variant="outline" onClick={handleExport} className="hidden lg:inline-flex">
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
+
+          {/* Actions overflow menu - shown below lg breakpoint */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="lg:hidden" aria-label="More actions">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowImportWizard(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExport}>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Add Expense - always visible */}
           <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Add Expense
+            <span className="hidden sm:inline">Add Expense</span>
+            <span className="sm:hidden">Add</span>
           </Button>
         </div>
       </div>
+
+      {/* Mobile filter row - shown when filter toggle is active */}
+      {showFilters && (
+        <div className="flex flex-wrap items-center gap-2 lg:hidden">
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as StatusFilter)}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="unreimbursed">Unreimbursed</SelectItem>
+              <SelectItem value="partial">Partial</SelectItem>
+              <SelectItem value="reimbursed">Reimbursed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={categoryFilter}
+            onValueChange={(value) => setCategoryFilter(value as CategoryFilter)}
+          >
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Filter by category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="uncategorized">Uncategorized</SelectItem>
+              {EXPENSE_CATEGORIES.map((category) => (
+                <SelectItem key={category.value} value={category.value}>
+                  {category.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="rounded-md border">
         <Table>

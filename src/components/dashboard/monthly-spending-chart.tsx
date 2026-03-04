@@ -123,45 +123,59 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand, range, on
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex flex-row items-start justify-between gap-4">
-          <div>
-            <CardTitle className="text-xl">Out-of-pocket Spending</CardTitle>
-            <div className="mt-2" aria-live="polite">
-              <p className="text-lg font-bold tracking-tight">
-                {formatCurrency(totalCents)}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {subtitleByRange[range]}
-              </p>
+        <div className="flex items-start justify-between gap-2">
+          <CardTitle className="text-xl">Out-of-pocket Spending</CardTitle>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="hidden sm:flex gap-1" role="group" aria-label="Time range">
+              {ranges.map((r) => (
+                <button
+                  key={r.key}
+                  onClick={() => onRangeChange(r.key)}
+                  className={`px-2 py-1 text-xs rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                    range === r.key
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                  aria-pressed={range === r.key}
+                >
+                  {r.label}
+                </button>
+              ))}
             </div>
-          </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="flex gap-1" role="group" aria-label="Time range">
-            {ranges.map((r) => (
+            {onToggleExpand && (
               <button
-                key={r.key}
-                onClick={() => onRangeChange(r.key)}
-                className={`px-2 py-1 text-xs rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                  range === r.key
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
-                aria-pressed={range === r.key}
+                onClick={onToggleExpand}
+                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label={expanded ? "Minimize chart" : "Maximize chart"}
               >
-                {r.label}
+                {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
               </button>
-            ))}
+            )}
           </div>
-          {onToggleExpand && (
+        </div>
+        <div className="flex gap-1 mt-2 sm:hidden" role="group" aria-label="Time range">
+          {ranges.map((r) => (
             <button
-              onClick={onToggleExpand}
-              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              aria-label={expanded ? "Minimize chart" : "Maximize chart"}
+              key={r.key}
+              onClick={() => onRangeChange(r.key)}
+              className={`px-2 py-1 text-xs rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                range === r.key
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+              aria-pressed={range === r.key}
             >
-              {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+              {r.label}
             </button>
-          )}
-          </div>
+          ))}
+        </div>
+        <div className="mt-2" aria-live="polite">
+          <p className="text-lg font-bold tracking-tight">
+            {formatCurrency(totalCents)}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {subtitleByRange[range]}
+          </p>
         </div>
       </CardHeader>
       <CardContent>
