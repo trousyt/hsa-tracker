@@ -53,6 +53,7 @@ import {
   type ImportExpense,
 } from "@/lib/import-utils"
 import { compressImage, isValidFileType, isValidFileSize } from "@/lib/compression"
+import { DROPZONE_ACCEPT_CONFIG, MAX_FILE_SIZE_BYTES } from "@/lib/constants/file-types"
 
 interface ImportWizardProps {
   onClose: () => void
@@ -274,10 +275,8 @@ export function ImportWizard({ onClose }: ImportWizardProps) {
     isDragActive: isPdfDragActive,
   } = useDropzone({
     onDrop: onPdfDrop,
-    accept: {
-      "application/pdf": [".pdf"],
-      "image/*": [".jpeg", ".jpg", ".png", ".webp", ".heic"],
-    },
+    accept: DROPZONE_ACCEPT_CONFIG,
+    maxSize: MAX_FILE_SIZE_BYTES,
   })
 
   const updatePdfMatch = (index: number, expenseId: Id<"expenses"> | null) => {

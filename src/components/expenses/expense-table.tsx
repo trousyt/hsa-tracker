@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect, lazy, Suspense } from "react"
+import { useState, useMemo, useEffect, useCallback, lazy, Suspense } from "react"
+import { useDropzone, type FileRejection } from "react-dropzone"
 import {
   flexRender,
   getCoreRowModel,
@@ -41,6 +42,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { getExpenseColumns } from "./expense-columns"
 import { exportExpensesToCSV } from "@/lib/export"
 import { formatCurrency } from "@/lib/currency"
+import { DROPZONE_ACCEPT_CONFIG, MAX_FILE_SIZE_BYTES } from "@/lib/constants/file-types"
 const ExpenseDialog = lazy(() =>
   import("./expense-dialog").then((m) => ({ default: m.ExpenseDialog }))
 )
@@ -81,6 +83,48 @@ export function ExpenseTable() {
   const [deleteExpense, setDeleteExpense] = useState<Expense | null>(null)
   const [viewExpenseId, setViewExpenseId] = useState<Id<"expenses"> | null>(null)
   const [showImportWizard, setShowImportWizard] = useState(false)
+  const [droppedFile, setDroppedFile] = useState<File | null>(null)
+
+  // Page-level drag-and-drop for quick expense creation
+  const isDropDisabled = createDialogOpen || !!editExpense
+
+  const onFileDrop = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0) {
+      setDroppedFile(acceptedFiles[0])
+      setCreateDialogOpen(true)
+    }
+  }, [])
+
+  const onFileDropRejected = useCallback((rejections: FileRejection[]) => {
+    const firstError = rejections[0]?.errors[0]
+    if (firstError?.code === "too-many-files") {
+      toast.error("Please drop one receipt at a time")
+    } else if (firstError?.code === "file-invalid-type") {
+      toast.error("Invalid file type. Please drop an image or PDF.")
+    } else if (firstError?.code === "file-too-large") {
+      toast.error("File too large. Maximum size is 10MB.")
+    } else {
+      toast.error("Invalid file")
+    }
+  }, [])
+
+  const { getRootProps: getDropRootProps, isDragActive } = useDropzone({
+    noClick: true,
+    noKeyboard: true,
+    multiple: false,
+    disabled: isDropDisabled,
+    accept: DROPZONE_ACCEPT_CONFIG,
+    maxSize: MAX_FILE_SIZE_BYTES,
+    onDrop: onFileDrop,
+    onDropRejected: onFileDropRejected,
+  })
+
+  // Preload the dialog chunk when dragging to avoid Suspense delay on first drop
+  useEffect(() => {
+    if (isDragActive) {
+      import("./expense-dialog")
+    }
+  }, [isDragActive])
 
   const columns = useMemo(
     () =>
@@ -114,7 +158,6 @@ export function ExpenseTable() {
     toast.success("Expenses exported to CSV")
   }
 
-  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table API is designed this way
   const table = useReactTable({
     data: expenses ?? [],
     columns,
@@ -196,7 +239,20 @@ export function ExpenseTable() {
   }
 
   return (
-    <div className="space-y-4">
+    <div {...getDropRootProps()} className="relative space-y-4">
+      {/* Drag overlay — only visible when dragging a file over the page */}
+      {isDragActive && !isDropDisabled && (
+        <div
+          className="absolute inset-0 z-40 pointer-events-none flex items-center justify-center bg-background/80 border-2 border-dashed border-primary rounded-lg animate-in fade-in-0 duration-200"
+          aria-hidden="true"
+        >
+          <div className="text-center">
+            <Upload className="mx-auto h-10 w-10 text-primary mb-2" />
+            <p className="text-lg font-medium text-primary">Drop receipt to add expense</p>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold">Expenses</h2>
         <div className="flex items-center gap-2 sm:gap-4">
@@ -392,7 +448,11 @@ export function ExpenseTable() {
       <Suspense fallback={null}>
         <ExpenseDialog
           open={createDialogOpen}
-          onOpenChange={setCreateDialogOpen}
+          onOpenChange={(open) => {
+            setCreateDialogOpen(open)
+            if (!open) setDroppedFile(null)
+          }}
+          initialFile={droppedFile ?? undefined}
         />
       </Suspense>
 
