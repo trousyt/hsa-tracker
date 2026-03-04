@@ -86,7 +86,11 @@ export function ExpenseTable() {
   const [droppedFile, setDroppedFile] = useState<File | null>(null)
 
   // Page-level drag-and-drop for quick expense creation
-  const isDropDisabled = createDialogOpen || !!editExpense
+  const isDropDisabled =
+    createDialogOpen ||
+    !!editExpense ||
+    !!deleteExpense ||
+    !!viewExpenseId
 
   const onFileDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {

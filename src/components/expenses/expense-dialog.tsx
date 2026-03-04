@@ -529,7 +529,7 @@ export function ExpenseDialog({
             {/* File Upload - only for new expenses */}
             {!isEditing && (
               <div className="mb-4">
-                {(uploadStatus === "idle" || uploadStatus === "error") && !initialFile ? (
+                {(uploadStatus === "error" || (uploadStatus === "idle" && !initialFile)) ? (
                   <div
                     {...getRootProps()}
                     className={cn(

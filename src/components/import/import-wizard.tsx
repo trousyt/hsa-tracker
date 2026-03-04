@@ -534,7 +534,7 @@ export function ImportWizard({ onClose }: ImportWizardProps) {
         <Check className="h-4 w-4" />
         <AlertDescription>
           Successfully imported {importedExpenses.length} expenses. Now you can
-          optionally attach PDF receipts.
+          optionally attach receipt files.
         </AlertDescription>
       </Alert>
 
@@ -552,11 +552,11 @@ export function ImportWizard({ onClose }: ImportWizardProps) {
         <FileText className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
         <p className="text-sm">
           {isPdfDragActive
-            ? "Drop PDF files here..."
-            : "Drop PDF receipts here to auto-match"}
+            ? "Drop receipt files here..."
+            : "Drop receipt files here to auto-match"}
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          Files named with date (e.g., 2024-01-15-DrSmith.pdf) will auto-match
+          Files named with date (e.g., 2024-01-15-DrSmith.pdf) can auto-match
         </p>
       </div>
 
