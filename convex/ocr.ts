@@ -1,6 +1,8 @@
-import { action, internalMutation, internalQuery, query } from "./_generated/server"
+import { action, mutation, internalMutation, internalQuery, query } from "./_generated/server"
 import { v } from "convex/values"
-import { internal } from "./_generated/api"
+import { api, internal } from "./_generated/api"
+import { getOptionalAuth, requireAuth } from "./lib/auth"
+import { MAX_OCR_PAGES_PER_MONTH } from "./lib/constants"
 
 // Internal mutation to update OCR status
 export const updateOcrStatus = internalMutation({
@@ -10,7 +12,8 @@ export const updateOcrStatus = internalMutation({
       v.literal("pending"),
       v.literal("processing"),
       v.literal("completed"),
-      v.literal("failed")
+      v.literal("failed"),
+      v.literal("skipped")
     ),
     ocrError: v.optional(v.string()),
   },
@@ -83,6 +86,11 @@ export const incrementUsage = internalMutation({
 export const getCurrentUsage = query({
   args: {},
   handler: async (ctx) => {
+    const userId = await getOptionalAuth(ctx)
+    if (!userId) {
+      return { yearMonth: "", pagesProcessed: 0, estimatedCostCents: 0 }
+    }
+
     const now = new Date()
     const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
 
@@ -166,7 +174,12 @@ export const extractExpenseData = action({
 
       if (!response.ok) {
         const errorText = await response.text()
-        throw new Error(`OCR proxy error: ${response.status} - ${errorText}`)
+        // Log raw error for debugging (visible in Convex dashboard)
+        console.error(`OCR proxy error [${response.status}]: ${errorText}`)
+        if (response.status >= 500) {
+          throw new Error("OCR processing service error")
+        }
+        throw new Error("OCR processing failed")
       }
 
       const result = (await response.json()) as {
@@ -190,14 +203,61 @@ export const extractExpenseData = action({
 
       return { success: true, data: result.data! }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "OCR failed"
+      const rawMessage = error instanceof Error ? error.message : String(error)
+      console.error(`OCR failed for document ${documentId}: ${rawMessage}`)
+
+      // Use sanitized message for user-facing storage
+      const isKnownSafe = [
+        "OCR processing service error",
+        "OCR processing failed",
+        "Document not found",
+        "File not found in storage",
+      ].includes(rawMessage)
+
+      const safeMessage = isKnownSafe ? rawMessage : "OCR failed"
+
       await ctx.runMutation(internal.ocr.updateOcrStatus, {
         documentId,
         ocrStatus: "failed",
-        ocrError: errorMessage,
+        ocrError: safeMessage,
       })
-      return { success: false, error: errorMessage }
+      return { success: false, error: safeMessage }
     }
+  },
+})
+
+/** Retry OCR on a skipped or failed document if under monthly cap. */
+export const retryDocument = mutation({
+  args: { documentId: v.id("documents") },
+  handler: async (ctx, { documentId }) => {
+    const userId = await requireAuth(ctx)
+
+    const doc = await ctx.db.get(documentId)
+    if (!doc || doc.userId !== userId) {
+      throw new Error("Document not found")
+    }
+
+    if (doc.ocrStatus !== "skipped" && doc.ocrStatus !== "failed") {
+      return { retried: false, reason: "not_eligible" }
+    }
+
+    // Check monthly cap
+    const now = new Date()
+    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+    const usage = await ctx.db
+      .query("ocrUsage")
+      .withIndex("by_year_month", (q) => q.eq("yearMonth", yearMonth))
+      .first()
+
+    if ((usage?.pagesProcessed ?? 0) >= MAX_OCR_PAGES_PER_MONTH) {
+      return { retried: false, reason: "still_over_limit" }
+    }
+
+    // Reset status and schedule OCR
+    await ctx.db.patch(documentId, { ocrStatus: "pending", ocrError: undefined })
+    await ctx.scheduler.runAfter(0, api.ocr.extractExpenseData, { documentId })
+
+    return { retried: true }
   },
 })
 

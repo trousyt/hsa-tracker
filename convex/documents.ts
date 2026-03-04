@@ -2,6 +2,7 @@ import { v } from "convex/values"
 import { mutation, query } from "./_generated/server"
 import { api } from "./_generated/api"
 import { requireAuth, getOptionalAuth } from "./lib/auth"
+import { ALLOWED_MIME_TYPES, MAX_OCR_PAGES_PER_MONTH } from "./lib/constants"
 
 // Generate an upload URL for file storage
 export const generateUploadUrl = mutation({
@@ -23,19 +24,48 @@ export const save = mutation({
   handler: async (ctx, args) => {
     const userId = await requireAuth(ctx)
 
+    // Validate MIME type against allowlist
+    if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(args.mimeType)) {
+      throw new Error("Unsupported file type")
+    }
+
+    // Check OCR monthly usage
+    const now = new Date()
+    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+    const usage = await ctx.db
+      .query("ocrUsage")
+      .withIndex("by_year_month", (q) => q.eq("yearMonth", yearMonth))
+      .first()
+    const ocrOverLimit = (usage?.pagesProcessed ?? 0) >= MAX_OCR_PAGES_PER_MONTH
+
     const documentId = await ctx.db.insert("documents", {
       userId,
       storageId: args.storageId,
       originalFilename: args.originalFilename,
       mimeType: args.mimeType,
       sizeBytes: args.sizeBytes,
-      ocrStatus: "pending",
+      ocrStatus: ocrOverLimit ? "skipped" : "pending",
     })
 
-    // Trigger OCR processing in the background
-    await ctx.scheduler.runAfter(0, api.ocr.extractExpenseData, { documentId })
+    if (ocrOverLimit) {
+      // Log the capped attempt
+      await ctx.db.insert("securityAuditLogs", {
+        userId,
+        action: "ocr_monthly_cap_exceeded",
+        details: JSON.stringify({
+          documentId,
+          currentUsage: usage?.pagesProcessed ?? 0,
+          limit: MAX_OCR_PAGES_PER_MONTH,
+          yearMonth,
+        }),
+        timestamp: Date.now(),
+      })
+    } else {
+      // Trigger OCR processing in the background
+      await ctx.scheduler.runAfter(0, api.ocr.extractExpenseData, { documentId })
+    }
 
-    return documentId
+    return { documentId, ocrScheduled: !ocrOverLimit }
   },
 })
 

@@ -57,7 +57,7 @@ interface ExpenseDialogProps {
 }
 
 type UploadStatus = "idle" | "compressing" | "uploading" | "saving" | "done" | "error"
-type OcrStatus = "idle" | "pending" | "processing" | "completed" | "failed"
+type OcrStatus = "idle" | "pending" | "processing" | "completed" | "failed" | "skipped"
 
 export function ExpenseDialog({
   open,
@@ -93,6 +93,7 @@ export function ExpenseDialog({
   const saveDocument = useMutation(api.documents.save)
   const addToExpense = useMutation(api.documents.addToExpense)
   const removeDocument = useMutation(api.documents.remove)
+  const retryOcr = useMutation(api.ocr.retryDocument)
 
   // Track successful submission to avoid cleaning up documents that were attached
   const submittedSuccessfully = useRef(false)
@@ -148,6 +149,8 @@ export function ExpenseDialog({
       toast.error("Couldn't extract data from receipt", {
         description: uploadedDocument.ocrError || "Please enter details manually",
       })
+    } else if (uploadedDocument?.ocrStatus === "skipped") {
+      // Don't toast here — already toasted at upload time
     }
   }, [uploadedDocument?.ocrStatus, uploadedDocument?.ocrExtractedData, uploadedDocument?.ocrError, isSubmitting])
 
@@ -200,8 +203,11 @@ export function ExpenseDialog({
         mimeType: compressedFile.type,
         sizeBytes: compressedFile.size,
       })
-      // Handle both return shapes: plain ID or { documentId, ocrScheduled }
-      const documentId = typeof result === "string" ? result : result.documentId
+      const documentId = result.documentId
+
+      if (!result.ocrScheduled) {
+        toast.warning("OCR processing skipped: monthly limit reached")
+      }
 
       setUploadedDocumentId(documentId)
       setUploadStatus("done")
@@ -555,6 +561,32 @@ export function ExpenseDialog({
                               <AlertCircle className="h-3 w-3 text-amber-600" />
                               <span className="text-amber-600">Couldn't extract data</span>
                             </>
+                          )}
+                          {uploadStatus === "done" && ocrStatusFromDoc === "skipped" && (
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="h-3 w-3 text-amber-600" />
+                              <span className="text-amber-600">OCR skipped — monthly limit</span>
+                              <button
+                                type="button"
+                                className="text-xs underline text-primary hover:text-primary/80"
+                                onClick={async () => {
+                                  if (!uploadedDocumentId) return
+                                  try {
+                                    const result = await retryOcr({ documentId: uploadedDocumentId })
+                                    if (result?.retried) {
+                                      toast.success("OCR retry scheduled")
+                                    } else {
+                                      toast.warning("Still over monthly limit")
+                                    }
+                                  } catch (error) {
+                                    toast.error(getUserErrorMessage(error, "OCR retry failed"))
+                                    console.error("OCR retry failed:", error)
+                                  }
+                                }}
+                              >
+                                Retry
+                              </button>
+                            </div>
                           )}
                         </div>
                         {uploadStatus !== "done" && (

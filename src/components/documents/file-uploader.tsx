@@ -84,8 +84,11 @@ export function FileUploader({ expenseId, onUploadComplete }: FileUploaderProps)
         mimeType: compressedFile.type,
         sizeBytes: compressedFile.size,
       })
-      // Handle both return shapes: plain ID or { documentId, ocrScheduled }
-      const documentId = typeof result === "string" ? result : result.documentId
+      const documentId = result.documentId
+
+      if (!result.ocrScheduled) {
+        toast.warning("OCR processing skipped: monthly limit reached")
+      }
 
       // Add to expense
       await addToExpense({ expenseId, documentId })

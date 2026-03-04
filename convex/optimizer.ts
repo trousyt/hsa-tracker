@@ -1,6 +1,7 @@
 import { v } from "convex/values"
 import { query, mutation } from "./_generated/server"
 import { requireAuth, getOptionalAuth } from "./lib/auth"
+import { MAX_TARGET_CENTS } from "./lib/constants"
 
 /**
  * Reimbursement Optimizer using Dynamic Programming
@@ -37,6 +38,26 @@ export const findOptimal = query({
       return {
         success: false,
         message: "Target amount must be positive",
+        expenses: [],
+        totalCents: 0,
+        exactMatch: false,
+      }
+    }
+
+    if (args.targetCents > MAX_TARGET_CENTS) {
+      return {
+        success: false,
+        message: "Target amount too large (maximum $10,000)",
+        expenses: [],
+        totalCents: 0,
+        exactMatch: false,
+      }
+    }
+
+    if (!Number.isInteger(args.targetCents)) {
+      return {
+        success: false,
+        message: "Target amount must be a whole number of cents",
         expenses: [],
         totalCents: 0,
         exactMatch: false,

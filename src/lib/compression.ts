@@ -1,3 +1,5 @@
+import { ALLOWED_MIME_TYPES } from "@convex/lib/constants"
+
 const MAX_SIZE_MB = 0.5 // Target max file size (500KB)
 const MAX_WIDTH_OR_HEIGHT = 1920 // Max dimension
 
@@ -41,14 +43,7 @@ export async function compressImage(file: File): Promise<File> {
  * Validate file type
  */
 export function isValidFileType(file: File): boolean {
-  const validTypes = [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/heic",
-    "application/pdf",
-  ]
-  return validTypes.includes(file.type)
+  return (ALLOWED_MIME_TYPES as readonly string[]).includes(file.type)
 }
 
 /**

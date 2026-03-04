@@ -48,7 +48,8 @@ export default defineSchema({
       v.literal("pending"),
       v.literal("processing"),
       v.literal("completed"),
-      v.literal("failed")
+      v.literal("failed"),
+      v.literal("skipped")
     ),
     ocrConfidence: v.optional(v.number()),
     ocrExtractedData: v.optional(
@@ -93,6 +94,17 @@ export default defineSchema({
   }).index("by_year_month", ["yearMonth"]),
 
   // Audit log for file access (security compliance)
+  // Audit log for rate-limiting and security events
+  securityAuditLogs: defineTable({
+    userId: v.string(),
+    action: v.string(),
+    details: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_action", ["action"])
+    .index("by_timestamp", ["timestamp"]),
+
   fileAccessLogs: defineTable({
     userId: v.string(),
     documentId: v.id("documents"),
