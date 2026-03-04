@@ -15,6 +15,7 @@ import {
   isValidFileSize,
   formatFileSize,
 } from "@/lib/compression"
+import { DROPZONE_ACCEPT_CONFIG, MAX_FILE_SIZE_BYTES } from "@/lib/constants/file-types"
 
 interface FileUploaderProps {
   expenseId: Id<"expenses">
@@ -130,11 +131,8 @@ export function FileUploader({ expenseId, onUploadComplete }: FileUploaderProps)
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: {
-      "image/*": [".jpeg", ".jpg", ".png", ".webp", ".heic"],
-      "application/pdf": [".pdf"],
-    },
-    maxSize: 10 * 1024 * 1024, // 10MB
+    accept: DROPZONE_ACCEPT_CONFIG,
+    maxSize: MAX_FILE_SIZE_BYTES,
   })
 
   const removeFile = (index: number) => {

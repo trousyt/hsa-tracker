@@ -24,6 +24,7 @@ import {
   isValidFileType,
   isValidFileSize,
 } from "@/lib/compression"
+import { DROPZONE_ACCEPT_CONFIG, MAX_FILE_SIZE_BYTES } from "@/lib/constants/file-types"
 
 /** Fields that support OCR comparison */
 type OcrFieldKey = "amount" | "datePaid" | "provider"
@@ -54,6 +55,8 @@ interface ExpenseDialogProps {
     originalFilename: string
     mimeType: string
   }
+  /** File to immediately begin uploading when dialog opens (from drag-and-drop on table) */
+  initialFile?: File
 }
 
 type UploadStatus = "idle" | "compressing" | "uploading" | "saving" | "done" | "error"
@@ -65,6 +68,7 @@ export function ExpenseDialog({
   expense,
   ocrData,
   ocrDocument,
+  initialFile,
 }: ExpenseDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadedDocumentId, setUploadedDocumentId] = useState<Id<"documents"> | null>(null)
@@ -97,6 +101,10 @@ export function ExpenseDialog({
 
   // Track successful submission to avoid cleaning up documents that were attached
   const submittedSuccessfully = useRef(false)
+  // Abort controller to cancel in-progress uploads when dialog closes
+  const abortControllerRef = useRef<AbortController | null>(null)
+  // Ref to always call the latest uploadFile without adding it to effect deps
+  const uploadFileRef = useRef<(file: File) => Promise<void>>(null!)
 
   // Watch uploaded document for OCR completion
   const uploadedDocument = useQuery(
@@ -122,6 +130,7 @@ export function ExpenseDialog({
     if (open) {
       submittedSuccessfully.current = false
     } else {
+      abortControllerRef.current?.abort()
       cleanupOrphanedDocument()
       setUploadedDocumentId(null)
       setUploadStatus("idle")
@@ -139,6 +148,7 @@ export function ExpenseDialog({
 
   // Watch for OCR completion and update form
   useEffect(() => {
+    if (!open) return // Dialog closing — ignore late OCR updates
     if (uploadedDocument?.ocrStatus === "completed" && uploadedDocument.ocrExtractedData) {
       // Don't update form if submission is in progress (race condition prevention)
       if (isSubmitting) return
@@ -152,11 +162,13 @@ export function ExpenseDialog({
     } else if (uploadedDocument?.ocrStatus === "skipped") {
       // Don't toast here — already toasted at upload time
     }
-  }, [uploadedDocument?.ocrStatus, uploadedDocument?.ocrExtractedData, uploadedDocument?.ocrError, isSubmitting])
+  }, [open, uploadedDocument?.ocrStatus, uploadedDocument?.ocrExtractedData, uploadedDocument?.ocrError, isSubmitting])
 
   const ocrStatusFromDoc: OcrStatus = uploadedDocument?.ocrStatus ?? "idle"
 
   const uploadFile = useCallback(async (file: File) => {
+    abortControllerRef.current = new AbortController()
+    const signal = abortControllerRef.current.signal
     try {
       // Validate file
       if (!isValidFileType(file)) {
@@ -174,17 +186,20 @@ export function ExpenseDialog({
       setUploadStatus("compressing")
       setUploadProgress(10)
       const compressedFile = await compressImage(file)
+      if (signal.aborted) return
 
       // Get upload URL
       setUploadStatus("uploading")
       setUploadProgress(30)
       const uploadUrl = await generateUploadUrl()
+      if (signal.aborted) return
 
       // Upload file
       const response = await fetch(uploadUrl, {
         method: "POST",
         headers: { "Content-Type": compressedFile.type },
         body: compressedFile,
+        signal,
       })
 
       if (!response.ok) {
@@ -193,6 +208,7 @@ export function ExpenseDialog({
 
       const { storageId } = await response.json()
       setUploadProgress(70)
+      if (signal.aborted) return
 
       // Save document record (triggers OCR)
       setUploadStatus("saving")
@@ -213,6 +229,7 @@ export function ExpenseDialog({
       setUploadStatus("done")
       setUploadProgress(100)
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return
       const message = getUserErrorMessage(error, "Upload failed")
       setUploadStatus("error")
       setUploadError(message)
@@ -220,6 +237,16 @@ export function ExpenseDialog({
       console.error("File upload error:", error)
     }
   }, [generateUploadUrl, saveDocument])
+
+  // Keep ref in sync so auto-upload effect always calls the latest version
+  uploadFileRef.current = uploadFile
+
+  // Auto-trigger upload when initialFile is provided (from page-level drag-and-drop)
+  useEffect(() => {
+    if (initialFile && uploadStatus === "idle") {
+      uploadFileRef.current(initialFile)
+    }
+  }, [initialFile]) // eslint-disable-line react-hooks/exhaustive-deps -- uploadStatus guards re-entry; ref avoids stale closure
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -229,11 +256,8 @@ export function ExpenseDialog({
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: {
-      "image/*": [".jpeg", ".jpg", ".png", ".webp", ".heic"],
-      "application/pdf": [".pdf"],
-    },
-    maxSize: 10 * 1024 * 1024,
+    accept: DROPZONE_ACCEPT_CONFIG,
+    maxSize: MAX_FILE_SIZE_BYTES,
     multiple: false,
     disabled: uploadStatus !== "idle" && uploadStatus !== "error",
   })
@@ -505,7 +529,7 @@ export function ExpenseDialog({
             {/* File Upload - only for new expenses */}
             {!isEditing && (
               <div className="mb-4">
-                {uploadStatus === "idle" || uploadStatus === "error" ? (
+                {(uploadStatus === "error" || (uploadStatus === "idle" && !initialFile)) ? (
                   <div
                     {...getRootProps()}
                     className={cn(
