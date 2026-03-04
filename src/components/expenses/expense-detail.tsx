@@ -210,10 +210,11 @@ export function ExpenseDetail({
                   <Sparkles className="h-4 w-4 text-primary" />
                   <span className="text-sm">OCR data available from receipt</span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <Button
                     size="sm"
                     variant="ghost"
+                    className="w-full sm:w-auto"
                     onClick={async () => {
                       await acknowledgeOcr({ id: expense._id })
                       toast.success("OCR data disregarded")
@@ -224,6 +225,7 @@ export function ExpenseDetail({
                   <Button
                     size="sm"
                     variant="outline"
+                    className="w-full sm:w-auto"
                     onClick={() => setEditMode("apply-ocr")}
                   >
                     Apply Data
