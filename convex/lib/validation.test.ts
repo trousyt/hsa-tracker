@@ -48,12 +48,12 @@ describe("validateProvider", () => {
     expect(() => validateProvider("   ")).toThrow("cannot be empty")
   })
 
-  test("rejects strings over 500 chars", () => {
-    expect(() => validateProvider("a".repeat(501))).toThrow("500 characters")
+  test("rejects strings over 200 chars", () => {
+    expect(() => validateProvider("a".repeat(201))).toThrow("200 characters")
   })
 
-  test("accepts exactly 500 chars", () => {
-    expect(() => validateProvider("a".repeat(500))).not.toThrow()
+  test("accepts exactly 200 chars", () => {
+    expect(() => validateProvider("a".repeat(200))).not.toThrow()
   })
 })
 
@@ -68,6 +68,16 @@ describe("validateDatePaid", () => {
     expect(() => validateDatePaid("2026/01/15")).toThrow("YYYY-MM-DD")
     expect(() => validateDatePaid("not-a-date")).toThrow("YYYY-MM-DD")
     expect(() => validateDatePaid("")).toThrow("YYYY-MM-DD")
+  })
+
+  test("rejects invalid calendar dates", () => {
+    expect(() => validateDatePaid("2026-02-31")).toThrow("YYYY-MM-DD")
+    expect(() => validateDatePaid("2026-04-31")).toThrow("YYYY-MM-DD")
+    expect(() => validateDatePaid("2025-02-29")).toThrow("YYYY-MM-DD") // 2025 not a leap year
+  })
+
+  test("accepts valid leap year date", () => {
+    expect(() => validateDatePaid("2024-02-29")).not.toThrow() // 2024 is a leap year
   })
 })
 

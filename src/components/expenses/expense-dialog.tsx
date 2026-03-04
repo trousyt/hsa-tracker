@@ -541,11 +541,16 @@ export function ExpenseDialog({
                                 className="text-xs underline text-primary hover:text-primary/80"
                                 onClick={async () => {
                                   if (!uploadedDocumentId) return
-                                  const result = await retryOcr({ documentId: uploadedDocumentId })
-                                  if (result.retried) {
-                                    toast.success("OCR retry scheduled")
-                                  } else {
-                                    toast.warning("Still over monthly limit")
+                                  try {
+                                    const result = await retryOcr({ documentId: uploadedDocumentId })
+                                    if (result?.retried) {
+                                      toast.success("OCR retry scheduled")
+                                    } else {
+                                      toast.warning("Still over monthly limit")
+                                    }
+                                  } catch (error) {
+                                    toast.error(error instanceof Error ? error.message : "OCR retry failed")
+                                    console.error("OCR retry failed:", error)
                                   }
                                 }}
                               >

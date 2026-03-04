@@ -47,7 +47,7 @@ export const findOptimal = query({
     if (args.targetCents > MAX_TARGET_CENTS) {
       return {
         success: false,
-        message: "Target amount too large (maximum $100,000)",
+        message: "Target amount too large (maximum $10,000)",
         expenses: [],
         totalCents: 0,
         exactMatch: false,

@@ -15,5 +15,5 @@ export const MAX_BATCH_SIZE = 500
 /** Maximum OCR pages processed per calendar month. */
 export const MAX_OCR_PAGES_PER_MONTH = 200
 
-/** Maximum target amount in cents for the reimbursement optimizer ($100,000). */
-export const MAX_TARGET_CENTS = 10_000_000
+/** Maximum target amount in cents for the reimbursement optimizer ($10,000). */
+export const MAX_TARGET_CENTS = 1_000_000

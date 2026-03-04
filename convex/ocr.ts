@@ -210,7 +210,6 @@ export const extractExpenseData = action({
       const isKnownSafe = [
         "OCR processing service error",
         "OCR processing failed",
-        "Missing Cloud Run configuration",
         "Document not found",
         "File not found in storage",
       ].includes(rawMessage)

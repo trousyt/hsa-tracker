@@ -14,14 +14,19 @@ export function validateProvider(value: string): void {
   if (!value.trim()) {
     throw new Error("Provider cannot be empty")
   }
-  if (value.length > 500) {
-    throw new Error("Provider must be 500 characters or fewer")
+  if (value.length > 200) {
+    throw new Error("Provider must be 200 characters or fewer")
   }
 }
 
-/** Validate that datePaid matches YYYY-MM-DD format. */
+/** Validate that datePaid is a valid calendar date in YYYY-MM-DD format. */
 export function validateDatePaid(value: string): void {
   if (!DATE_REGEX.test(value)) {
+    throw new Error("Date must be in YYYY-MM-DD format")
+  }
+  const [y, m, d] = value.split("-").map(Number)
+  const date = new Date(Date.UTC(y, m - 1, d))
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) {
     throw new Error("Date must be in YYYY-MM-DD format")
   }
 }

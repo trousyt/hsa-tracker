@@ -11,7 +11,16 @@ const http = httpRouter()
  * Convex env vars are set via `npx convex env set SITE_URL <url>`.
  */
 function getCorsHeaders() {
-  const origin = process.env.SITE_URL ?? ""
+  const raw = process.env.SITE_URL ?? ""
+  let origin = ""
+  if (raw && raw !== "*") {
+    try {
+      const parsed = new URL(raw)
+      origin = parsed.origin
+    } catch {
+      // Invalid URL — block cross-origin by leaving origin empty
+    }
+  }
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, OPTIONS",
