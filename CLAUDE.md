@@ -103,6 +103,7 @@ When implementing destructive functionality: write the code, push/deploy it, the
 ## User Preferences
 
 - **Ask for information instead of using placeholders.** When you need specific information (URLs, credentials, names, etc.), ask the user directly rather than inserting placeholders or leaving manual steps.
+- **Always use git worktrees when executing work plans.** Create an isolated worktree before implementing changes to keep the main branch clean.
 
 ## Plans
 
