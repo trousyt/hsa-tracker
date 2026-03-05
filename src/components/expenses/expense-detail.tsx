@@ -48,6 +48,13 @@ export function ExpenseDetail({
     expenseId ? { id: expenseId } : "skip"
   )
 
+  // Auto-close sheet when a previously-loaded expense is soft-deleted (returns null)
+  useEffect(() => {
+    if (expenseId && expense === null) {
+      onOpenChange(false)
+    }
+  }, [expenseId, expense, onOpenChange])
+
   // Query documents to check for OCR data
   const documents = useQuery(
     api.documents.getMany,

@@ -8,7 +8,7 @@ import {
   useReactTable,
   type SortingState,
 } from "@tanstack/react-table"
-import { useQuery } from "convex/react"
+import { useQuery, useMutation } from "convex/react"
 import { api } from "@convex/_generated/api"
 import type { Doc, Id } from "@convex/_generated/dataModel"
 
@@ -46,9 +46,6 @@ import { DROPZONE_ACCEPT_CONFIG, MAX_FILE_SIZE_BYTES } from "@/lib/constants/fil
 const ExpenseDialog = lazy(() =>
   import("./expense-dialog").then((m) => ({ default: m.ExpenseDialog }))
 )
-const DeleteExpenseDialog = lazy(() =>
-  import("./delete-expense-dialog").then((m) => ({ default: m.DeleteExpenseDialog }))
-)
 const ExpenseDetail = lazy(() =>
   import("./expense-detail").then((m) => ({ default: m.ExpenseDetail }))
 )
@@ -77,10 +74,13 @@ export function ExpenseTable() {
   const [globalFilter, setGlobalFilter] = useState("")
   const [showFilters, setShowFilters] = useState(false)
 
+  // Soft-delete mutations
+  const softDelete = useMutation(api.expenses.softDelete)
+  const undoSoftDelete = useMutation(api.expenses.undoSoftDelete)
+
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editExpense, setEditExpense] = useState<Expense | null>(null)
-  const [deleteExpense, setDeleteExpense] = useState<Expense | null>(null)
   const [viewExpenseId, setViewExpenseId] = useState<Id<"expenses"> | null>(null)
   const [showImportWizard, setShowImportWizard] = useState(false)
   const [droppedFile, setDroppedFile] = useState<File | null>(null)
@@ -89,7 +89,6 @@ export function ExpenseTable() {
   const isDropDisabled =
     createDialogOpen ||
     !!editExpense ||
-    !!deleteExpense ||
     !!viewExpenseId
 
   const onFileDrop = useCallback((acceptedFiles: File[]) => {
@@ -130,14 +129,33 @@ export function ExpenseTable() {
     }
   }, [isDragActive])
 
+  const handleSoftDelete = useCallback(async (expense: Expense) => {
+    try {
+      await softDelete({ id: expense._id })
+      toast("Deleted " + expense.provider + " — " + formatCurrency(expense.amountCents), {
+        action: {
+          label: "Undo",
+          onClick: () => {
+            undoSoftDelete({ id: expense._id })
+              .then(() => toast.success("Expense restored"))
+              .catch(() => toast.error("Failed to undo — expense was permanently deleted"))
+          },
+        },
+        duration: 10_000,
+      })
+    } catch {
+      toast.error("Failed to delete expense")
+    }
+  }, [softDelete, undoSoftDelete])
+
   const columns = useMemo(
     () =>
       getExpenseColumns({
         onView: (expense) => setViewExpenseId(expense._id),
         onEdit: (expense) => setEditExpense(expense),
-        onDelete: (expense) => setDeleteExpense(expense),
+        onDelete: (expense) => void handleSoftDelete(expense),
       }),
-    []
+    [handleSoftDelete]
   )
 
   // Keyboard shortcut: Cmd/Ctrl + N to create new expense
@@ -457,6 +475,11 @@ export function ExpenseTable() {
             if (!open) setDroppedFile(null)
           }}
           initialFile={droppedFile ?? undefined}
+          onCreated={(id) => {
+            toast.success("Expense created", {
+              action: { label: "View", onClick: () => setViewExpenseId(id) },
+            })
+          }}
         />
       </Suspense>
 
@@ -466,15 +489,6 @@ export function ExpenseTable() {
           open={!!editExpense}
           onOpenChange={(open) => !open && setEditExpense(null)}
           expense={editExpense ?? undefined}
-        />
-      </Suspense>
-
-      {/* Delete Dialog */}
-      <Suspense fallback={null}>
-        <DeleteExpenseDialog
-          open={!!deleteExpense}
-          onOpenChange={(open) => !open && setDeleteExpense(null)}
-          expense={deleteExpense}
         />
       </Suspense>
 

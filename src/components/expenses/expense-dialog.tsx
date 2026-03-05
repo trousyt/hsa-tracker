@@ -57,6 +57,8 @@ interface ExpenseDialogProps {
   }
   /** File to immediately begin uploading when dialog opens (from drag-and-drop on table) */
   initialFile?: File
+  /** Called after a new expense is created (not on edit). Parent can use this to show a custom toast. */
+  onCreated?: (id: Id<"expenses">) => void
 }
 
 type UploadStatus = "idle" | "compressing" | "uploading" | "saving" | "done" | "error"
@@ -69,6 +71,7 @@ export function ExpenseDialog({
   ocrData,
   ocrDocument,
   initialFile,
+  onCreated,
 }: ExpenseDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadedDocumentId, setUploadedDocumentId] = useState<Id<"documents"> | null>(null)
@@ -302,7 +305,11 @@ export function ExpenseDialog({
             console.warn("Non-fatal: failed to acknowledge OCR for expense", expenseId, err)
           }
         }
-        toast.success("Expense created successfully")
+        if (onCreated) {
+          onCreated(expenseId)
+        } else {
+          toast.success("Expense created successfully")
+        }
       }
       onOpenChange(false)
     } catch (error) {

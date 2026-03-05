@@ -1,5 +1,6 @@
 import { v } from "convex/values"
-import { mutation, query } from "./_generated/server"
+import { mutation, internalMutation, query } from "./_generated/server"
+import { internal } from "./_generated/api"
 import { requireAuth, getOptionalAuth } from "./lib/auth"
 import { validateExpenseFields } from "./lib/validation"
 import { MAX_BATCH_SIZE } from "./lib/constants"
@@ -25,6 +26,9 @@ export const list = query({
       .query("expenses")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect()
+
+    // Exclude soft-deleted expenses
+    expenses = expenses.filter((e) => e.deletedAt === undefined)
 
     // Apply status filter
     if (args.status) {
@@ -55,7 +59,7 @@ export const get = query({
     if (!userId) return null
 
     const expense = await ctx.db.get(args.id)
-    if (!expense || expense.userId !== userId) return null
+    if (!expense || expense.userId !== userId || expense.deletedAt) return null
 
     return expense
   },
@@ -165,9 +169,9 @@ export const update = mutation({
     const userId = await requireAuth(ctx)
     const { id, ...updates } = args
 
-    // Verify ownership
+    // Verify ownership and not soft-deleted
     const expense = await ctx.db.get(id)
-    if (!expense || expense.userId !== userId) {
+    if (!expense || expense.userId !== userId || expense.deletedAt) {
       throw new Error("Expense not found")
     }
 
@@ -194,29 +198,50 @@ export const update = mutation({
   },
 })
 
-// Delete an expense
-export const remove = mutation({
+/** Soft-delete an expense — sets deletedAt and schedules permanent deletion after 30s. */
+export const softDelete = mutation({
   args: { id: v.id("expenses") },
   handler: async (ctx, args) => {
     const userId = await requireAuth(ctx)
-
-    // Verify ownership
     const expense = await ctx.db.get(args.id)
-    if (!expense || expense.userId !== userId) {
-      throw new Error("Expense not found")
-    }
+    if (!expense || expense.userId !== userId) throw new Error("Expense not found")
+    if (expense.deletedAt) throw new Error("Expense already deleted")
+    const now = Date.now()
+    await ctx.db.patch(args.id, { deletedAt: now })
+    await ctx.scheduler.runAfter(30_000, internal.expenses.permanentlyDelete, {
+      id: args.id,
+      expectedDeletedAt: now,
+    })
+    return { id: args.id }
+  },
+})
 
-    // First delete associated reimbursements
+/** Undo a soft-delete by clearing deletedAt. The orphaned scheduled function no-ops on timestamp mismatch. */
+export const undoSoftDelete = mutation({
+  args: { id: v.id("expenses") },
+  handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx)
+    const expense = await ctx.db.get(args.id)
+    if (!expense || expense.userId !== userId) throw new Error("Expense not found")
+    if (!expense.deletedAt) return // Already restored, no-op
+    await ctx.db.patch(args.id, { deletedAt: undefined })
+  },
+})
+
+/** Permanently delete an expense and cascade-delete reimbursements. Runs as a scheduled internal mutation. */
+export const permanentlyDelete = internalMutation({
+  args: { id: v.id("expenses"), expectedDeletedAt: v.number() },
+  handler: async (ctx, args) => {
+    const expense = await ctx.db.get(args.id)
+    if (!expense || expense.deletedAt !== args.expectedDeletedAt) return
+    // Cascade-delete reimbursements
     const reimbursements = await ctx.db
       .query("reimbursements")
       .withIndex("by_expense", (q) => q.eq("expenseId", args.id))
       .collect()
-
-    for (const reimbursement of reimbursements) {
-      await ctx.db.delete(reimbursement._id)
+    for (const r of reimbursements) {
+      await ctx.db.delete(r._id)
     }
-
-    // Delete the expense
     await ctx.db.delete(args.id)
   },
 })
@@ -227,9 +252,9 @@ export const acknowledgeOcr = mutation({
   handler: async (ctx, args) => {
     const userId = await requireAuth(ctx)
 
-    // Verify ownership
+    // Verify ownership and not soft-deleted
     const expense = await ctx.db.get(args.id)
-    if (!expense || expense.userId !== userId) {
+    if (!expense || expense.userId !== userId || expense.deletedAt) {
       throw new Error("Expense not found")
     }
 
@@ -258,6 +283,9 @@ export const listWithOcrStatus = query({
       .query("expenses")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect()
+
+    // Exclude soft-deleted expenses
+    expenses = expenses.filter((e) => e.deletedAt === undefined)
 
     // Apply status filter
     if (args.status) {
@@ -316,10 +344,11 @@ export const getSummary = query({
       }
     }
 
-    const expenses = await ctx.db
+    const allExpenses = await ctx.db
       .query("expenses")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect()
+    const expenses = allExpenses.filter((e) => e.deletedAt === undefined)
 
     let totalAmountCents = 0
     let totalReimbursedCents = 0

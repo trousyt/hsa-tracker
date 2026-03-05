@@ -30,6 +30,7 @@ export default defineSchema({
       v.literal("reimbursed")
     ),
     ocrAcknowledged: v.optional(v.boolean()), // True if user has applied or disregarded OCR data
+    deletedAt: v.optional(v.number()), // Date.now() timestamp; undefined = not deleted
   })
     .index("by_user", ["userId"])
     .index("by_status", ["status"])

@@ -65,10 +65,11 @@ export const findOptimal = query({
     }
 
     // Get all unreimbursed and partial expenses for this user, sorted by date (oldest first for FIFO)
-    const expenses = await ctx.db
+    const allExpenses = await ctx.db
       .query("expenses")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect()
+    const expenses = allExpenses.filter((e) => e.deletedAt === undefined)
 
     // Sort by date (oldest first)
     expenses.sort((a, b) => a.datePaid.localeCompare(b.datePaid))

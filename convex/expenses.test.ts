@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test"
 import { expect, test, describe } from "vitest"
-import { api } from "./_generated/api"
+import { api, internal } from "./_generated/api"
 import schema from "./schema"
 import { modules } from "./test.setup"
 
@@ -138,7 +138,7 @@ describe("expenses", () => {
       })
     })
 
-    test("delete expense removes it", async () => {
+    test("soft delete hides expense from queries", async () => {
       const { authed } = await createAuthenticatedContext()
 
       const expenseId = await authed.mutation(api.expenses.create, {
@@ -147,14 +147,68 @@ describe("expenses", () => {
         amountCents: 1000,
       })
 
-      await authed.mutation(api.expenses.remove, { id: expenseId })
+      await authed.mutation(api.expenses.softDelete, { id: expenseId })
 
+      // Should be hidden from get and list
       const expense = await authed.query(api.expenses.get, { id: expenseId })
       expect(expense).toBeNull()
+
+      const expenses = await authed.query(api.expenses.list, {})
+      expect(expenses).toHaveLength(0)
     })
 
-    test("delete expense also removes associated reimbursements", async () => {
+    test("undo soft delete restores expense", async () => {
       const { authed } = await createAuthenticatedContext()
+
+      const expenseId = await authed.mutation(api.expenses.create, {
+        datePaid: "2026-01-15",
+        provider: "Restored",
+        amountCents: 2000,
+      })
+
+      await authed.mutation(api.expenses.softDelete, { id: expenseId })
+      await authed.mutation(api.expenses.undoSoftDelete, { id: expenseId })
+
+      const expense = await authed.query(api.expenses.get, { id: expenseId })
+      expect(expense).not.toBeNull()
+      expect(expense?.provider).toBe("Restored")
+    })
+
+    test("double undo is a no-op", async () => {
+      const { authed } = await createAuthenticatedContext()
+
+      const expenseId = await authed.mutation(api.expenses.create, {
+        datePaid: "2026-01-15",
+        provider: "Provider",
+        amountCents: 1000,
+      })
+
+      await authed.mutation(api.expenses.softDelete, { id: expenseId })
+      await authed.mutation(api.expenses.undoSoftDelete, { id: expenseId })
+      // Second undo should not throw
+      await authed.mutation(api.expenses.undoSoftDelete, { id: expenseId })
+
+      const expense = await authed.query(api.expenses.get, { id: expenseId })
+      expect(expense).not.toBeNull()
+    })
+
+    test("double soft delete throws", async () => {
+      const { authed } = await createAuthenticatedContext()
+
+      const expenseId = await authed.mutation(api.expenses.create, {
+        datePaid: "2026-01-15",
+        provider: "Provider",
+        amountCents: 1000,
+      })
+
+      await authed.mutation(api.expenses.softDelete, { id: expenseId })
+      await expect(
+        authed.mutation(api.expenses.softDelete, { id: expenseId })
+      ).rejects.toThrow("already deleted")
+    })
+
+    test("permanently delete cascade-deletes reimbursements", async () => {
+      const { t, authed } = await createAuthenticatedContext()
 
       const expenseId = await authed.mutation(api.expenses.create, {
         datePaid: "2026-01-15",
@@ -167,18 +221,110 @@ describe("expenses", () => {
         amountCents: 500,
       })
 
-      // Verify reimbursement exists
-      const reimbursementsBefore = await authed.query(api.reimbursements.getByExpense, {
-        expenseId,
+      // Soft delete sets deletedAt
+      await authed.mutation(api.expenses.softDelete, { id: expenseId })
+
+      // Get the deletedAt timestamp for the permanentlyDelete call
+      const softDeleted = await t.run(async (ctx) => {
+        return await ctx.db.get(expenseId)
       })
-      expect(reimbursementsBefore).toHaveLength(1)
+      expect(softDeleted?.deletedAt).toBeDefined()
 
-      // Delete expense
-      await authed.mutation(api.expenses.remove, { id: expenseId })
+      // Run permanent delete directly
+      await t.mutation(internal.expenses.permanentlyDelete, {
+        id: expenseId,
+        expectedDeletedAt: softDeleted!.deletedAt!,
+      })
 
-      // Reimbursements should be gone too (expense is deleted, can't query)
+      // Expense should be gone from DB entirely
+      const gone = await t.run(async (ctx) => {
+        return await ctx.db.get(expenseId)
+      })
+      expect(gone).toBeNull()
+    })
+
+    test("permanently delete no-ops on timestamp mismatch (undo race)", async () => {
+      const { t, authed } = await createAuthenticatedContext()
+
+      const expenseId = await authed.mutation(api.expenses.create, {
+        datePaid: "2026-01-15",
+        provider: "Provider",
+        amountCents: 1000,
+      })
+
+      await authed.mutation(api.expenses.softDelete, { id: expenseId })
+
+      // Undo the soft delete
+      await authed.mutation(api.expenses.undoSoftDelete, { id: expenseId })
+
+      // Orphaned permanent delete fires with old timestamp — should no-op
+      await t.mutation(internal.expenses.permanentlyDelete, {
+        id: expenseId,
+        expectedDeletedAt: 12345,
+      })
+
+      // Expense should still exist
       const expense = await authed.query(api.expenses.get, { id: expenseId })
-      expect(expense).toBeNull()
+      expect(expense).not.toBeNull()
+    })
+
+    test("soft-deleted expenses excluded from getSummary", async () => {
+      const { authed } = await createAuthenticatedContext()
+
+      await authed.mutation(api.expenses.create, {
+        datePaid: "2026-01-10",
+        provider: "Provider A",
+        amountCents: 10000,
+      })
+      const expense2 = await authed.mutation(api.expenses.create, {
+        datePaid: "2026-01-15",
+        provider: "Provider B",
+        amountCents: 5000,
+      })
+
+      await authed.mutation(api.expenses.softDelete, { id: expense2 })
+
+      const summary = await authed.query(api.expenses.getSummary, {})
+      expect(summary.expenseCount).toBe(1)
+      expect(summary.totalAmountCents).toBe(10000)
+    })
+
+    test("update rejects soft-deleted expense", async () => {
+      const { authed } = await createAuthenticatedContext()
+
+      const expenseId = await authed.mutation(api.expenses.create, {
+        datePaid: "2026-01-15",
+        provider: "Provider",
+        amountCents: 1000,
+      })
+
+      await authed.mutation(api.expenses.softDelete, { id: expenseId })
+
+      await expect(
+        authed.mutation(api.expenses.update, {
+          id: expenseId,
+          provider: "Updated",
+        })
+      ).rejects.toThrow("Expense not found")
+    })
+
+    test("reimbursement rejects soft-deleted expense", async () => {
+      const { authed } = await createAuthenticatedContext()
+
+      const expenseId = await authed.mutation(api.expenses.create, {
+        datePaid: "2026-01-15",
+        provider: "Provider",
+        amountCents: 1000,
+      })
+
+      await authed.mutation(api.expenses.softDelete, { id: expenseId })
+
+      await expect(
+        authed.mutation(api.reimbursements.record, {
+          expenseId,
+          amountCents: 500,
+        })
+      ).rejects.toThrow("Expense not found")
     })
   })
 

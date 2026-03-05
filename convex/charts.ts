@@ -15,10 +15,11 @@ export const getChartData = query({
       return { monthlySpending: [], compoundingData: [] }
     }
 
-    const expenses = await ctx.db
+    const allExpenses = await ctx.db
       .query("expenses")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect()
+    const expenses = allExpenses.filter((e) => e.deletedAt === undefined)
 
     // Aggregate monthly spending
     const monthMap = new Map<
