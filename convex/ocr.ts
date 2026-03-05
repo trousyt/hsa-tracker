@@ -64,7 +64,7 @@ export const updateOcrResults = internalMutation({
           .withIndex("by_user", (q) => q.eq("userId", doc.userId))
           .collect()
         for (const expense of expenses) {
-          if (expense.documentIds.includes(documentId) && expense.ocrAcknowledged) {
+          if (expense.documentIds.includes(documentId) && expense.ocrAcknowledged && expense.deletedAt == null) {
             await ctx.db.patch(expense._id, { ocrAcknowledged: false })
           }
         }

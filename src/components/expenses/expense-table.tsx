@@ -132,7 +132,7 @@ export function ExpenseTable() {
   const handleSoftDelete = useCallback(async (expense: Expense) => {
     try {
       await softDelete({ id: expense._id })
-      toast("Deleted " + expense.provider + " — " + formatCurrency(expense.amountCents), {
+      toast.success("Deleted " + expense.provider + " — " + formatCurrency(expense.amountCents), {
         action: {
           label: "Undo",
           onClick: () => {

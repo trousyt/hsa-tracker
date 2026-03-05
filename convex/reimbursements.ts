@@ -13,7 +13,7 @@ export const record = mutation({
     const userId = await requireAuth(ctx)
 
     const expense = await ctx.db.get(args.expenseId)
-    if (!expense || expense.userId !== userId || expense.deletedAt) {
+    if (!expense || expense.userId !== userId || expense.deletedAt !== undefined) {
       throw new Error("Expense not found")
     }
 
@@ -67,7 +67,7 @@ export const recordFull = mutation({
     const userId = await requireAuth(ctx)
 
     const expense = await ctx.db.get(args.expenseId)
-    if (!expense || expense.userId !== userId || expense.deletedAt) {
+    if (!expense || expense.userId !== userId || expense.deletedAt !== undefined) {
       throw new Error("Expense not found")
     }
 

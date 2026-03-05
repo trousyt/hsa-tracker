@@ -59,7 +59,7 @@ export const get = query({
     if (!userId) return null
 
     const expense = await ctx.db.get(args.id)
-    if (!expense || expense.userId !== userId || expense.deletedAt) return null
+    if (!expense || expense.userId !== userId || expense.deletedAt !== undefined) return null
 
     return expense
   },
@@ -171,7 +171,7 @@ export const update = mutation({
 
     // Verify ownership and not soft-deleted
     const expense = await ctx.db.get(id)
-    if (!expense || expense.userId !== userId || expense.deletedAt) {
+    if (!expense || expense.userId !== userId || expense.deletedAt !== undefined) {
       throw new Error("Expense not found")
     }
 
@@ -254,7 +254,7 @@ export const acknowledgeOcr = mutation({
 
     // Verify ownership and not soft-deleted
     const expense = await ctx.db.get(args.id)
-    if (!expense || expense.userId !== userId || expense.deletedAt) {
+    if (!expense || expense.userId !== userId || expense.deletedAt !== undefined) {
       throw new Error("Expense not found")
     }
 
