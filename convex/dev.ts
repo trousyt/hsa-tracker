@@ -1,5 +1,5 @@
 import { internalMutation } from "./_generated/server"
-import { api } from "./_generated/api"
+import { internal } from "./_generated/api"
 
 // Clear all data - DEVELOPMENT ONLY
 // Run with: bunx convex run dev:clearAllData
@@ -46,7 +46,7 @@ export const retryFailedOcr = internalMutation({
     const failed = documents.filter((d) => d.ocrStatus === "failed")
 
     for (const doc of failed) {
-      await ctx.scheduler.runAfter(0, api.ocr.extractExpenseData, {
+      await ctx.scheduler.runAfter(0, internal.ocr.extractExpenseData, {
         documentId: doc._id,
       })
     }

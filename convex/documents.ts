@@ -1,6 +1,6 @@
 import { v } from "convex/values"
 import { mutation, query } from "./_generated/server"
-import { api } from "./_generated/api"
+import { internal } from "./_generated/api"
 import { requireAuth, getOptionalAuth } from "./lib/auth"
 import { ALLOWED_MIME_TYPES, MAX_OCR_PAGES_PER_MONTH } from "./lib/constants"
 
@@ -62,7 +62,7 @@ export const save = mutation({
       })
     } else {
       // Trigger OCR processing in the background
-      await ctx.scheduler.runAfter(0, api.ocr.extractExpenseData, { documentId })
+      await ctx.scheduler.runAfter(0, internal.ocr.extractExpenseData, { documentId })
     }
 
     return { documentId, ocrScheduled: !ocrOverLimit }

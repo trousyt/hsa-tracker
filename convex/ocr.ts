@@ -1,6 +1,6 @@
-import { action, mutation, internalMutation, internalQuery, query } from "./_generated/server"
+import { internalAction, mutation, internalMutation, internalQuery, query } from "./_generated/server"
 import { v } from "convex/values"
-import { api, internal } from "./_generated/api"
+import { internal } from "./_generated/api"
 import { getOptionalAuth, requireAuth } from "./lib/auth"
 import { MAX_OCR_PAGES_PER_MONTH } from "./lib/constants"
 
@@ -137,7 +137,7 @@ type OcrExtractedData = {
 }
 
 // Main OCR action - calls Cloud Run proxy
-export const extractExpenseData = action({
+export const extractExpenseData = internalAction({
   args: { documentId: v.id("documents") },
   handler: async (ctx, { documentId }): Promise<OcrResult> => {
     // 1. Mark as processing
@@ -273,7 +273,7 @@ export const retryDocument = mutation({
 
     // Reset status and schedule OCR
     await ctx.db.patch(documentId, { ocrStatus: "pending", ocrError: undefined })
-    await ctx.scheduler.runAfter(0, api.ocr.extractExpenseData, { documentId })
+    await ctx.scheduler.runAfter(0, internal.ocr.extractExpenseData, { documentId })
 
     return { retried: true }
   },
