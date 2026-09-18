@@ -29,6 +29,25 @@ def validate_auth():
     return True, None
 
 
+def has_valid_file_signature(content, mime_type):
+    """Return whether content has the expected signature for a supported MIME type."""
+    signatures = {
+        "image/jpeg": lambda value: value.startswith(b"\xff\xd8\xff"),
+        "image/png": lambda value: value.startswith(b"\x89PNG\r\n\x1a\n"),
+        "image/webp": lambda value: (
+            len(value) >= 12 and value.startswith(b"RIFF") and value[8:12] == b"WEBP"
+        ),
+        "image/heic": lambda value: (
+            len(value) >= 12
+            and value[4:8] == b"ftyp"
+            and value[8:12] in {b"heic", b"heix", b"hevc", b"hevx", b"mif1", b"msf1"}
+        ),
+        "application/pdf": lambda value: value.startswith(b"%PDF-"),
+    }
+    validator = signatures.get(mime_type)
+    return validator is not None and validator(content)
+
+
 def parse_expense_entities(document):
     """Extract amount, date, and provider from Document AI response."""
     result = {}
@@ -89,8 +108,12 @@ def process_document():
         return jsonify({"error": "Missing content or mimeType"}), 400
 
     try:
-        # Decode base64 content
-        content = base64.b64decode(content_base64)
+        # Decode base64 content strictly and verify it before sending bytes to
+        # Document AI. The declared MIME type and upload metadata are controlled
+        # by the client and therefore cannot establish the file's real type.
+        content = base64.b64decode(content_base64, validate=True)
+        if not has_valid_file_signature(content, mime_type):
+            return jsonify({"error": "File content does not match mimeType"}), 400
 
         # Initialize Document AI client
         client = documentai.DocumentProcessorServiceClient()
@@ -113,6 +136,8 @@ def process_document():
             "data": extracted_data,
         })
 
+    except (ValueError, base64.binascii.Error):
+        return jsonify({"error": "Invalid base64 content"}), 400
     except Exception as e:
         return jsonify({
             "success": False,

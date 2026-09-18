@@ -17,6 +17,11 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
     }),
   ],
   callbacks: {
+    /**
+     * Return the existing owner or create the first authenticated user as owner.
+     * When creating that first owner, claims only legacy records with no userId;
+     * records already owned by another user are never reassigned.
+     */
     async createOrUpdateUser(ctx, args) {
       // If this is an existing user returning, allow them if they're the owner
       if (args.existingUserId) {
