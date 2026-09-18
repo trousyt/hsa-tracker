@@ -16,6 +16,8 @@ import type * as expenses from "../expenses.js";
 import type * as fileAccess from "../fileAccess.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_constants from "../lib/constants.js";
+import type * as lib_validation from "../lib/validation.js";
 import type * as ocr from "../ocr.js";
 import type * as optimizer from "../optimizer.js";
 import type * as reimbursements from "../reimbursements.js";
@@ -35,6 +37,8 @@ declare const fullApi: ApiFromModules<{
   fileAccess: typeof fileAccess;
   http: typeof http;
   "lib/auth": typeof lib_auth;
+  "lib/constants": typeof lib_constants;
+  "lib/validation": typeof lib_validation;
   ocr: typeof ocr;
   optimizer: typeof optimizer;
   reimbursements: typeof reimbursements;

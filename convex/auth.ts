@@ -53,22 +53,27 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       // We need to cast to string since Convex Auth callbacks use string IDs
       const userIdStr = userId as unknown as string
 
-      // Migrate expenses
+      // Claim only legacy records that have no owner. Never reassign records
+      // belonging to an existing user during login.
       const expenses = await ctx.db.query("expenses").collect()
       for (const expense of expenses) {
-        await ctx.db.patch(expense._id as Id<"expenses">, { userId: userIdStr })
+        if (expense.userId === undefined) {
+          await ctx.db.patch(expense._id as Id<"expenses">, { userId: userIdStr })
+        }
       }
 
-      // Migrate documents
       const documents = await ctx.db.query("documents").collect()
       for (const document of documents) {
-        await ctx.db.patch(document._id as Id<"documents">, { userId: userIdStr })
+        if (document.userId === undefined) {
+          await ctx.db.patch(document._id as Id<"documents">, { userId: userIdStr })
+        }
       }
 
-      // Migrate reimbursements
       const reimbursements = await ctx.db.query("reimbursements").collect()
       for (const reimbursement of reimbursements) {
-        await ctx.db.patch(reimbursement._id as Id<"reimbursements">, { userId: userIdStr })
+        if (reimbursement.userId === undefined) {
+          await ctx.db.patch(reimbursement._id as Id<"reimbursements">, { userId: userIdStr })
+        }
       }
 
       return userId

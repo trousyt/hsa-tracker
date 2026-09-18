@@ -9,6 +9,9 @@ export const ALLOWED_MIME_TYPES = [
 
 export type AllowedMimeType = (typeof ALLOWED_MIME_TYPES)[number]
 
+/** Maximum upload size accepted by the backend (10 MiB). */
+export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
+
 /** Maximum number of expenses in a single batch import. */
 export const MAX_BATCH_SIZE = 500
 

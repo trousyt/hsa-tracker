@@ -73,33 +73,6 @@ export const updateOcrResults = internalMutation({
   },
 })
 
-// Internal mutation to increment usage counter
-export const incrementUsage = internalMutation({
-  args: { pages: v.number() },
-  handler: async (ctx, { pages }) => {
-    const now = new Date()
-    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
-
-    const existing = await ctx.db
-      .query("ocrUsage")
-      .withIndex("by_year_month", (q) => q.eq("yearMonth", yearMonth))
-      .first()
-
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        pagesProcessed: existing.pagesProcessed + pages,
-        lastUpdated: Date.now(),
-      })
-    } else {
-      await ctx.db.insert("ocrUsage", {
-        yearMonth,
-        pagesProcessed: pages,
-        lastUpdated: Date.now(),
-      })
-    }
-  },
-})
-
 // Query to get current month's usage
 export const getCurrentUsage = query({
   args: {},
@@ -210,10 +183,11 @@ export const extractExpenseData = internalAction({
         throw new Error(result.error || "OCR processing failed")
       }
 
-      // 4. Increment usage counter (1 page per document)
-      await ctx.runMutation(internal.ocr.incrementUsage, { pages: 1 })
+      // Usage was reserved transactionally when this document was scheduled.
+      // Do not increment it here: retries and concurrent jobs must not bypass
+      // the monthly cap.
 
-      // 5. Save results
+      // 4. Save results
       await ctx.runMutation(internal.ocr.updateOcrResults, {
         documentId,
         ocrExtractedData: result.data!,
@@ -269,6 +243,21 @@ export const retryDocument = mutation({
 
     if ((usage?.pagesProcessed ?? 0) >= MAX_OCR_PAGES_PER_MONTH) {
       return { retried: false, reason: "still_over_limit" }
+    }
+
+    // Reserve the retry before scheduling so concurrent retries cannot exceed
+    // the monthly budget.
+    if (usage) {
+      await ctx.db.patch(usage._id, {
+        pagesProcessed: usage.pagesProcessed + 1,
+        lastUpdated: Date.now(),
+      })
+    } else {
+      await ctx.db.insert("ocrUsage", {
+        yearMonth,
+        pagesProcessed: 1,
+        lastUpdated: Date.now(),
+      })
     }
 
     // Reset status and schedule OCR

@@ -43,7 +43,8 @@ http.route({
     const idString = pathParts[pathParts.length - 1]
 
     // Get user agent for audit logging
-    const userAgent = request.headers.get("user-agent") ?? undefined
+    const rawUserAgent = request.headers.get("user-agent") ?? ""
+    const userAgent = rawUserAgent.slice(0, 512) || undefined
 
     // Validate the document ID format via internal query
     const documentId = await ctx.runQuery(internal.fileAccess.validateDocumentId, {
@@ -60,15 +61,8 @@ http.route({
     const identity = await ctx.auth.getUserIdentity()
 
     if (!identity) {
-      // Log failed access attempt
-      await ctx.runMutation(internal.fileAccess.logAccess, {
-        documentId,
-        action: "view",
-        success: false,
-        errorReason: "Not authenticated",
-        userAgent,
-      })
-
+      // Do not write attacker-controlled anonymous requests to the database.
+      // The edge/provider should provide rate limiting for these failures.
       return new Response("Unauthorized", {
         status: 401,
         headers: {

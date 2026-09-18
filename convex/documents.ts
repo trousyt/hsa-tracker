@@ -2,7 +2,11 @@ import { v } from "convex/values"
 import { mutation, query } from "./_generated/server"
 import { internal } from "./_generated/api"
 import { requireAuth, getOptionalAuth } from "./lib/auth"
-import { ALLOWED_MIME_TYPES, MAX_OCR_PAGES_PER_MONTH } from "./lib/constants"
+import {
+  ALLOWED_MIME_TYPES,
+  MAX_FILE_SIZE_BYTES,
+  MAX_OCR_PAGES_PER_MONTH,
+} from "./lib/constants"
 
 // Generate an upload URL for file storage
 export const generateUploadUrl = mutation({
@@ -24,9 +28,27 @@ export const save = mutation({
   handler: async (ctx, args) => {
     const userId = await requireAuth(ctx)
 
-    // Validate MIME type against allowlist
+    // Validate client metadata and the actual stored blob. Client-provided
+    // metadata must not be trusted for files that will be OCR'd or served.
     if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(args.mimeType)) {
       throw new Error("Unsupported file type")
+    }
+    if (!args.originalFilename.trim() || args.originalFilename.length > 255) {
+      throw new Error("Invalid filename")
+    }
+    if (!Number.isInteger(args.sizeBytes) || args.sizeBytes <= 0 || args.sizeBytes > MAX_FILE_SIZE_BYTES) {
+      throw new Error("File is too large")
+    }
+
+    const blob = await ctx.storage.get(args.storageId)
+    if (!blob || blob.size <= 0 || blob.size > MAX_FILE_SIZE_BYTES) {
+      throw new Error("File is too large or no longer exists")
+    }
+    if (blob.type && blob.type !== args.mimeType) {
+      throw new Error("File type does not match its contents")
+    }
+    if (blob.size !== args.sizeBytes) {
+      throw new Error("File size does not match its contents")
     }
 
     // Check OCR monthly usage
@@ -61,6 +83,21 @@ export const save = mutation({
         timestamp: Date.now(),
       })
     } else {
+      // Reserve the page before scheduling. This mutation is transactional,
+      // so concurrent uploads cannot all pass the same quota check.
+      if (usage) {
+        await ctx.db.patch(usage._id, {
+          pagesProcessed: usage.pagesProcessed + 1,
+          lastUpdated: Date.now(),
+        })
+      } else {
+        await ctx.db.insert("ocrUsage", {
+          yearMonth,
+          pagesProcessed: 1,
+          lastUpdated: Date.now(),
+        })
+      }
+
       // Trigger OCR processing in the background
       await ctx.scheduler.runAfter(0, internal.ocr.extractExpenseData, { documentId })
     }

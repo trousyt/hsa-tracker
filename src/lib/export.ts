@@ -6,6 +6,12 @@ import type { ExpenseCategory } from "./constants/expense-categories"
 
 type Expense = Doc<"expenses">
 
+/** Escape a text cell for CSV and prevent spreadsheet formula execution. */
+function escapeCsvText(value: string): string {
+  const safeValue = /^\s*[=+\-@]/.test(value) ? `'${value}` : value
+  return `"${safeValue.replace(/"/g, '""')}"`
+}
+
 export function exportExpensesToCSV(expenses: Expense[]): void {
   const headers = [
     "Date Paid",
@@ -22,13 +28,13 @@ export function exportExpensesToCSV(expenses: Expense[]): void {
     const remaining = expense.amountCents - expense.totalReimbursedCents
     return [
       expense.datePaid,
-      `"${expense.provider.replace(/"/g, '""')}"`, // Escape quotes
+      escapeCsvText(expense.provider),
       centsToDollars(expense.amountCents).toFixed(2),
       centsToDollars(expense.totalReimbursedCents).toFixed(2),
       centsToDollars(remaining).toFixed(2),
       expense.status,
-      getCategoryLabel(expense.category as ExpenseCategory | undefined),
-      expense.comment ? `"${expense.comment.replace(/"/g, '""')}"` : "",
+      escapeCsvText(getCategoryLabel(expense.category as ExpenseCategory | undefined)),
+      expense.comment ? escapeCsvText(expense.comment) : "",
     ]
   })
 
