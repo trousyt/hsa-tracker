@@ -28,8 +28,8 @@ export const save = mutation({
   handler: async (ctx, args) => {
     const userId = await requireAuth(ctx)
 
-    // Validate client metadata and the actual stored blob. Client-provided
-    // metadata must not be trusted for files that will be OCR'd or served.
+    // Validate client metadata against Convex's stored file metadata. The
+    // client-provided values must not be trusted for OCR'd or served files.
     if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(args.mimeType)) {
       throw new Error("Unsupported file type")
     }
@@ -40,15 +40,15 @@ export const save = mutation({
       throw new Error("File is too large")
     }
 
-    const blob = await ctx.storage.get(args.storageId)
-    if (!blob || blob.size <= 0 || blob.size > MAX_FILE_SIZE_BYTES) {
+    const metadata = await ctx.storage.getMetadata(args.storageId)
+    if (!metadata || metadata.size <= 0 || metadata.size > MAX_FILE_SIZE_BYTES) {
       throw new Error("File is too large or no longer exists")
     }
-    if (blob.type && blob.type !== args.mimeType) {
-      throw new Error("File type does not match its contents")
+    if (metadata.contentType && metadata.contentType !== args.mimeType) {
+      throw new Error("File type does not match its stored metadata")
     }
-    if (blob.size !== args.sizeBytes) {
-      throw new Error("File size does not match its contents")
+    if (metadata.size !== args.sizeBytes) {
+      throw new Error("File size does not match its stored metadata")
     }
 
     // Check OCR monthly usage
