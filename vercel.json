@@ -1,6 +1,6 @@
 {
   "installCommand": "bun install",
-  "buildCommand": "bunx convex deploy && bun run build",
+  "buildCommand": "bunx convex deploy --yes && bun run build",
   "framework": "vite",
   "outputDirectory": "dist"
 }
