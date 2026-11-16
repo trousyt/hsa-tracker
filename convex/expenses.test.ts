@@ -26,6 +26,28 @@ async function createAuthenticatedContext() {
 }
 
 describe("expenses", () => {
+  test("isolates public expense queries and mutations by identity", async () => {
+    const { t, authed } = await createAuthenticatedContext()
+    const expenseId = await authed.mutation(api.expenses.create, {
+      datePaid: "2026-01-15",
+      provider: "Private provider",
+      amountCents: 15000,
+    })
+    const other = t.withIdentity({ subject: "another-user" })
+
+    expect(await t.query(api.expenses.list, {})).toEqual([])
+    expect(await t.query(api.expenses.get, { id: expenseId })).toBeNull()
+    expect(await other.query(api.expenses.get, { id: expenseId })).toBeNull()
+    expect(await authed.query(api.expenses.get, { id: expenseId })).toMatchObject({
+      provider: "Private provider",
+    })
+    await expect(t.mutation(api.expenses.create, {
+      datePaid: "2026-01-15",
+      provider: "Anonymous",
+      amountCents: 100,
+    })).rejects.toThrow()
+  })
+
   describe("CRUD operations", () => {
     test("create expense with required fields", async () => {
       const { authed, userId } = await createAuthenticatedContext()
