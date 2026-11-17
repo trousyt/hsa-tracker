@@ -1,21 +1,7 @@
 import { convexTest } from "convex-test"
 import { expect, test, describe } from "vitest"
 import { api, internal } from "./_generated/api"
-import schema from "./schema"
-import { modules } from "./test.setup"
-
-async function createAuthenticatedContext() {
-  const t = convexTest(schema, modules)
-  const userId = await t.run(async (ctx) => {
-    return await ctx.db.insert("users", {
-      name: "Test User",
-      email: "test@example.com",
-      isOwner: true,
-    })
-  })
-  const authed = t.withIdentity({ subject: userId as unknown as string })
-  return { t, authed, userId }
-}
+import { createSessionContext as createAuthenticatedContext } from "../src/test/session.fixture"
 
 /** Create a document with a valid storage ID in the test environment. */
 async function createTestDocument(

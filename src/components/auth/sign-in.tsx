@@ -1,9 +1,27 @@
-import { useAuthActions } from "@convex-dev/auth/react"
+import { useSignInWithGithub, useOauth } from "@convex-dev/auth/methods/github/react"
+import { useState } from "react"
+import { api } from "../../../convex/_generated/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export function SignIn() {
-  const { signIn } = useAuthActions()
+  const { signIn } = useSignInWithGithub(api.authV2)
+  const { flowError } = useOauth()
+  const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+
+  async function startSignIn() {
+    setPending(true)
+    setError(null)
+    try {
+      const result = await signIn()
+      if (result.status !== "redirect") setError("Could not start sign-in. Please try again.")
+    } catch {
+      setError("Could not start sign-in. Please try again.")
+    } finally {
+      setPending(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -15,8 +33,10 @@ export function SignIn() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {(error || flowError) && <p role="alert">{error ?? "Sign-in could not be completed. Please try again."}</p>}
           <Button
-            onClick={() => void signIn("github")}
+            onClick={() => void startSignIn()}
+            disabled={pending}
             className="w-full"
             size="lg"
           >
@@ -33,6 +53,7 @@ function GitHubIcon({ className }: { className?: string }) {
   return (
     <svg
       className={className}
+      aria-hidden="true"
       viewBox="0 0 24 24"
       fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"

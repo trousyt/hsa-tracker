@@ -1,6 +1,5 @@
 import { httpRouter } from "convex/server"
 import { httpAction } from "./_generated/server"
-import { auth } from "./auth"
 import { internal } from "./_generated/api"
 
 const http = httpRouter()
@@ -28,9 +27,6 @@ function getCorsHeaders() {
   } as const
 }
 
-// Add Convex Auth routes
-auth.addHttpRoutes(http)
-
 // Secure file serving endpoint
 // Authenticates every request and logs access for audit compliance
 // Note: Convex HTTP router uses pathPrefix for dynamic segments, not path parameters
@@ -57,10 +53,10 @@ http.route({
       })
     }
 
-    // Check authentication via JWT in Authorization header
-    const identity = await ctx.auth.getUserIdentity()
+    // The v2 token identifies a session; resolve its user through the auth component.
+    const userId = await ctx.runQuery(internal.fileAccess.getCurrentUserId, {})
 
-    if (!identity) {
+    if (!userId) {
       // Do not write attacker-controlled anonymous requests to the database.
       // The edge/provider should provide rate limiting for these failures.
       return new Response("Unauthorized", {
@@ -72,11 +68,6 @@ http.route({
         },
       })
     }
-
-    // Extract user ID from identity subject
-    // Convex Auth format: "userId|sessionId" - we need just the userId part
-    // This matches what getAuthUserId() does internally
-    const userId = identity.subject.split("|")[0]
 
     // Fetch document and verify ownership
     const document = await ctx.runQuery(internal.fileAccess.getDocumentForAccess, {
