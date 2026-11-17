@@ -1,51 +1,76 @@
 import { useSignInWithGithub, useOauth } from "@convex-dev/auth/methods/github/react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import { authErrorMessage, sessionNoticeMessage } from "./auth-feedback"
+import type { SessionNotice } from "./auth-feedback"
+import { startSignInAttempt } from "./sign-in-attempt"
+import type { SignInFeedback } from "./sign-in-attempt"
 import { api } from "../../../convex/_generated/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
-export function SignIn() {
+/** GitHub sign-in with safe, actionable recovery feedback. */
+export function SignIn({ notice = null }: { notice?: SessionNotice }) {
   const { signIn } = useSignInWithGithub(api.authV2)
   const { flowError } = useOauth()
-  const [error, setError] = useState<string | null>(null)
-  const [pending, setPending] = useState(false)
+  const [{ pending, error }, setFeedback] = useState<SignInFeedback>({ pending: false, error: null })
+  const starting = useRef(false)
+  const feedbackRef = useRef<HTMLParagraphElement>(null)
+  const failure = error ?? (flowError ? authErrorMessage(flowError, "callback") : null)
+  const message = pending ? null : failure ?? sessionNoticeMessage(notice)
 
-  async function startSignIn() {
-    setPending(true)
-    setError(null)
-    try {
-      const result = await signIn()
-      if (result.status !== "redirect") setError("Could not start sign-in. Please try again.")
-    } catch {
-      setError("Could not start sign-in. Please try again.")
-    } finally {
-      setPending(false)
+  useEffect(() => {
+    if (message) feedbackRef.current?.focus()
+  }, [message])
+
+  useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      // Returning with Back may restore a page that was waiting to redirect.
+      if (event.persisted) {
+        starting.current = false
+        setFeedback({ pending: false, error: null })
+      }
     }
-  }
+    window.addEventListener("pageshow", handlePageShow)
+    return () => window.removeEventListener("pageshow", handlePageShow)
+  }, [])
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <main className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">HSA Expense Tracker</CardTitle>
+          <CardTitle><h1 className="text-2xl">HSA Expense Tracker</h1></CardTitle>
           <CardDescription>
             Sign in to access your HSA expense tracking dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {(error || flowError) && <p role="alert">{error ?? "Sign-in could not be completed. Please try again."}</p>}
+          <p
+            ref={feedbackRef}
+            id="auth-feedback"
+            role={failure && !pending ? "alert" : "status"}
+            aria-atomic="true"
+            tabIndex={message ? -1 : undefined}
+            className={message ? "mb-4 rounded-md border p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" : "sr-only"}
+          >
+            {message}
+          </p>
+          <p role="status" aria-live="polite" className="sr-only">
+            {pending ? "Opening GitHub sign-in. Please wait." : ""}
+          </p>
           <Button
-            onClick={() => void startSignIn()}
+            onClick={() => void startSignInAttempt(starting, signIn, setFeedback)}
             disabled={pending}
+            aria-busy={pending}
+            aria-describedby={message ? "auth-feedback" : undefined}
             className="w-full"
             size="lg"
           >
             <GitHubIcon className="mr-2 h-5 w-5" />
-            Sign in with GitHub
+            {pending ? "Opening GitHub…" : failure ? "Try GitHub sign-in again" : "Sign in with GitHub"}
           </Button>
         </CardContent>
       </Card>
-    </div>
+    </main>
   )
 }
 
