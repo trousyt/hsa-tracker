@@ -1,6 +1,6 @@
 import GitHub from "@auth/core/providers/github"
 import { convexAuth } from "@convex-dev/auth-legacy/server"
-import { Id } from "./_generated/dataModel"
+import type { Id } from "./_generated/dataModel"
 
 /** Retain the v1 configuration for recovery without exposing its sign-in functions. */
 export function legacyAuthForRecovery() {

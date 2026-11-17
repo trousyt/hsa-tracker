@@ -1,3 +1,4 @@
+import { getEnvironmentVariable } from "./lib/environment"
 import { httpRouter } from "convex/server"
 import { httpAction } from "./_generated/server"
 import { internal } from "./_generated/api"
@@ -5,17 +6,21 @@ import { internal } from "./_generated/api"
 const http = httpRouter()
 
 /**
- * Build CORS headers using the SITE_URL environment variable.
- * Falls back to empty string (blocks cross-origin) if not configured.
- * Convex env vars are set via `npx convex env set SITE_URL <url>`.
+ * Restrict file CORS to a single configured frontend origin and prevent caching
+ * of both file contents and authorization failures. Invalid configuration fails closed.
  */
-function getCorsHeaders() {
-  const raw = process.env.SITE_URL ?? ""
+function getFileResponseHeaders() {
+  const raw = getEnvironmentVariable("SITE_URL") ?? ""
   let origin = ""
   if (raw && raw !== "*") {
     try {
       const parsed = new URL(raw)
-      origin = parsed.origin
+      const secure = parsed.protocol === "https:" ||
+        (parsed.protocol === "http:" && ["localhost", "127.0.0.1"].includes(parsed.hostname))
+      if (secure && !parsed.username && !parsed.password &&
+          parsed.pathname === "/" && !parsed.search && !parsed.hash) {
+        origin = parsed.origin
+      }
     } catch {
       // Invalid URL — block cross-origin by leaving origin empty
     }
@@ -24,6 +29,8 @@ function getCorsHeaders() {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    "Cache-Control": "private, no-store, max-age=0",
+    "X-Content-Type-Options": "nosniff",
   } as const
 }
 
@@ -49,7 +56,7 @@ http.route({
     if (!documentId) {
       return new Response("Invalid document ID", {
         status: 400,
-        headers: { ...getCorsHeaders(), "Content-Type": "text/plain" },
+        headers: { ...getFileResponseHeaders(), "Content-Type": "text/plain" },
       })
     }
 
@@ -62,7 +69,7 @@ http.route({
       return new Response("Unauthorized", {
         status: 401,
         headers: {
-          ...getCorsHeaders(),
+          ...getFileResponseHeaders(),
           "Content-Type": "text/plain",
           "WWW-Authenticate": "Bearer",
         },
@@ -88,7 +95,7 @@ http.route({
 
       return new Response("Forbidden", {
         status: 403,
-        headers: { ...getCorsHeaders(), "Content-Type": "text/plain" },
+        headers: { ...getFileResponseHeaders(), "Content-Type": "text/plain" },
       })
     }
 
@@ -107,7 +114,7 @@ http.route({
 
       return new Response("File not found", {
         status: 404,
-        headers: { ...getCorsHeaders(), "Content-Type": "text/plain" },
+        headers: { ...getFileResponseHeaders(), "Content-Type": "text/plain" },
       })
     }
 
@@ -124,12 +131,10 @@ http.route({
     return new Response(blob, {
       status: 200,
       headers: {
-        ...getCorsHeaders(),
+        ...getFileResponseHeaders(),
         "Content-Type": document.mimeType,
         "Content-Disposition": `inline; filename="${encodeURIComponent(document.originalFilename)}"`,
         "Content-Length": document.sizeBytes.toString(),
-        "X-Content-Type-Options": "nosniff",
-        "Cache-Control": "private, no-store, max-age=0",
         // Prevent clickjacking
         "X-Frame-Options": "SAMEORIGIN",
       },
@@ -145,7 +150,7 @@ http.route({
     return new Response(null, {
       status: 204,
       headers: {
-        ...getCorsHeaders(),
+        ...getFileResponseHeaders(),
         "Access-Control-Max-Age": "86400",
       },
     })

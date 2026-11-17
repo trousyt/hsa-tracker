@@ -1,3 +1,4 @@
+import { ConvexError } from "convex/values"
 import type { Id } from "../_generated/dataModel"
 import type { MutationCtx } from "../_generated/server"
 
@@ -11,8 +12,12 @@ export async function resolveGithubOwner(
   existingUserId?: Id<"users">,
 ): Promise<Id<"users">> {
   if (!configuredGithubId || !numericGithubId.test(configuredGithubId) ||
-      !numericGithubId.test(githubId) || githubId !== configuredGithubId) {
+      !numericGithubId.test(githubId)) {
     throw new Error("GitHub owner authorization failed")
+  }
+
+  if (githubId !== configuredGithubId) {
+    throw new ConvexError({ code: "OWNER_ACCESS_DENIED" })
   }
 
   const users = await ctx.db.query("users").collect()

@@ -40,7 +40,7 @@ export const save = mutation({
       throw new Error("File is too large")
     }
 
-    const metadata = await ctx.storage.getMetadata(args.storageId)
+    const metadata = await ctx.db.system.get(args.storageId)
     if (!metadata || metadata.size <= 0 || metadata.size > MAX_FILE_SIZE_BYTES) {
       throw new Error("File is too large or no longer exists")
     }

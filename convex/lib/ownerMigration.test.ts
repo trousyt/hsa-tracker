@@ -66,6 +66,19 @@ describe("resolveGithubOwner", () => {
     expect(await t.run((ctx) => ctx.db.get(ownerId))).toMatchObject({ isOwner: true, githubId: "123" })
   })
 
+  it.each(["blob", "audit"])("does not initialize over orphaned %s state", async (state) => {
+    const t = convexTest(schema, modules)
+    await t.run(async (ctx) => {
+      if (state === "blob") {
+        await ctx.storage.store(new Blob(["orphaned receipt"]))
+      } else {
+        await ctx.db.insert("securityAuditLogs", { userId: "legacy-owner", action: "historical-event", timestamp: 1 })
+      }
+    })
+    await expect(t.run((ctx) => resolveGithubOwner(ctx, "123", "123"))).rejects.toThrow("Cannot initialize a nonempty environment")
+    expect(await t.run((ctx) => ctx.db.query("users").collect())).toEqual([])
+  })
+
   it("does not claim existing data in a userless environment", async () => {
     const t = convexTest(schema, modules)
     await t.run((ctx) => ctx.db.insert("expenses", {
