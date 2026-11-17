@@ -8,10 +8,13 @@ following accepted [#30](https://github.com/trousyt/hsa-tracker/issues/30), with
 [#34](https://github.com/trousyt/hsa-tracker/issues/34) still requires explicit
 production approval. See [deployment gates and production planning](DEPLOYMENT.md).
 
-**Status:** documentation preparation only, based on checkpoint `502df8a`.
-No application checks, real OAuth, backend commands, data writes or recovery were
-performed in this documentation pass. Unchecked items below are planned checks,
-not failures and not passing evidence. Do not close #33 from this document alone.
+**Status:** reviewed lanes integrated locally; automated checks executed on
+`300a6b00173c5943322d15bddbf7fa9e71e731c6` (details below). The original documentation
+preparation was based on checkpoint `502df8a`; it did not execute application checks.
+No browser/live OAuth validation, backend CLI/codegen/deployment, live data writes
+or recovery was performed in this integration pass. Unchecked items below remain
+planned checks, not failures or passing evidence. This does not establish completion
+of #31, #32 or #33, or authorize Production.
 
 ## Evidence ledger
 
@@ -25,7 +28,7 @@ results against an exact revision and time before changing any remaining status.
 | Dev target and owner | **Historical accepted:** direct migration to the recorded Dev deployment, real GitHub login, returning sign-in and reload; trusted numeric-ID comparison matched owner | Reconfirm target/callback/origins privately and repeat on integrated #31/#32 candidate |
 | Data preservation | **Historical accepted:** unchanged legacy app owner identity; owned financial/document records, blobs and historical audit references retained | Compare private baseline to candidate after validation, explain expected controlled-test deltas; no duplicates, reassignment or unowned-record claims |
 | Secure-file live boundary | **Historical accepted:** owner success; absent/invalid/revoked credentials denied with no-store reported; audit increments reported only for valid access | Broader upload/preview/download, expired/other-user denial, CORS, content protections and audit behavior on current candidate |
-| Automated checks | **Historical accepted:** typecheck, frontend/backend lint, non-watch tests, build and frozen install passed at #30; React Hook Form warning remained | New revision needs new results. Historical passes do not cover #31/#32 changes |
+| Automated checks | **Current local automated:** frozen install; root/app/node/Convex typechecks; lint with one existing warning; 271 tests in 22 files; local build and diff checks passed at `300a6b0` (commands below) | These are local checks, not deployed/backend-codegen, bearer-verification or browser acceptance |
 | Owner policy and sessions | **Source/fixture:** owner-resolution and callback tests, registered auth components and session-oriented HTTP tests exist | Confirm integrated test coverage and remaining real-provider/session gaps; bare identity injection is not bearer verification |
 | OAuth callback concurrency and rollback | **Not E2E proven:** upstream transactional source reasoning and start/invalid-ticket fixtures only; public mounted-component HTTP harness limitation | Use supported public flow for retry/concurrency and safe denial evidence if feasible; explicitly record any remaining gap, no private-table seeding |
 | Recovery | **Deferred to #33:** legacy state/config retained; backup including files reported, not reverified; no successful restore/recovery rehearsal | Keep unresolved, present owner-selected next step at planning gate. Owner does not want isolated restore; do not run one or reopen #30 |
@@ -37,7 +40,8 @@ Historical source:
 The acceptance comment predates the local checkpoint commit; do not treat its
 then-uncommitted wording as a current branch status or claim a current rerun.
 
-Inspected source/fixture seams at this checkpoint (not executed here):
+Source/fixture seams inspected in the original documentation pass (the current
+integrated automated run below also executed these tests):
 
 - [`authV2.test.ts`](../convex/authV2.test.ts): OAuth start and invalid-ticket path,
   not a successful mounted GitHub callback or callback rollback.
@@ -47,6 +51,49 @@ Inspected source/fixture seams at this checkpoint (not executed here):
 - [`http.test.ts`](../convex/http.test.ts) and
   [`fileAccess.test.ts`](../convex/fileAccess.test.ts): HTTP/session/ownership and
   audit fixtures; identity injection bypasses real bearer signature verification.
+
+## Current integrated local automated evidence
+
+Recorded 2026-11-17 at 17:43 UTC by the implementation agent, on Windows with
+Bun 1.4.2 and Node v24.21.0. Evidence class: **local automated/source review** only.
+Candidate branch: `feat/auth-v2-integration`; exact checked revision:
+`300a6b00173c5943322d15bddbf7fa9e71e731c6`.
+
+Local chain after #30 checkpoint `502df8aec40c29e126895363ad5619b914a7d03e`:
+
+- #31: `04fc4052976ab3a68ce5d72dc8b9936d24fc3843` (exact reviewed 16-file scope).
+- #32: `dbb880499838d121b94671d93db35d53de97c50a`, cherry-picked without conflicts
+  from `66564e751d38c4dffca5983f4d18e9856220e69d`.
+- #33 docs: `300a6b00173c5943322d15bddbf7fa9e71e731c6`, cherry-picked without
+  conflicts from `1e8d35e22b6cf0a29a5a4af31ebc44f973125021`; verified changes only
+  `docs/DEPLOYMENT.md` and this ledger. This evidence update is a later docs-only
+  commit and does not change the tested application tree.
+
+| Executed command/check | Observed sanitized result |
+| --- | --- |
+| `bun install --frozen-lockfile` | Passed; lockfile unchanged; run before `bunx` |
+| `bunx --no-install tsc --noEmit` | Passed (root references config; explicit project checks below also ran) |
+| `bunx --no-install tsc -p tsconfig.app.json --noEmit` | Passed |
+| `bunx --no-install tsc -p tsconfig.node.json --noEmit` | Passed |
+| `bunx --no-install tsc -p convex/tsconfig.json --noEmit` | Passed; no Convex CLI or code generation |
+| `bun run lint` | Passed, 0 errors; existing `react-hooks/incompatible-library` warning at `expense-form.tsx:147` |
+| `bun run test:run` | Passed: 271 tests in 22 files; Vitest warned about future native config-loader support for `__dirname` |
+| `bun run build` | Passed: local `tsc --noEmit && vite build`, 3607 modules transformed; scripts and Vite config inspected first; no Vercel/backend build |
+| `git diff --check`; `git diff --cached --check`; `git diff 502df8aec40c29e126895363ad5619b914a7d03e..HEAD --check` | Passed; clean worktree/index at checked candidate |
+| Bun inline documentation link-target check | Passed: 13 local Markdown link targets across the two docs; external URLs not requested |
+| Source review and Bun inline exact owner-denial contract check | Backend emits `ConvexError({ code: "OWNER_ACCESS_DENIED" })` only for a confirmed different valid numeric GitHub ID; frontend requires `ConvexError` and that exact structured code |
+
+The executed suite includes backend callback denial/configuration fixtures and
+frontend safe-code/generic-error tests, including mocked public HTTP transport
+reconstruction. Configuration/mapping failures are not presented as owner denial.
+This is not evidence of real GitHub callback propagation, mounted-component
+successful OAuth rollback/concurrency, deployed bearer signature/token-expiry
+verification, deployment upload transport, visual/a11y/responsive acceptance or
+live data preservation. Tests use isolated in-memory fixtures, not live records.
+
+No push, PR, merge into master, deployment, backend/live-data/OAuth/browser action,
+process-management operation or recovery was performed. Production remains an explicit approval gate;
+recovery remains deferred. The separate configuration commit `f7cc37d` is excluded.
 
 ## Safe evidence handling
 
@@ -68,7 +115,7 @@ sharing. Do not capture private financial views or browser network credentials.
 
 ### 1. Integrate locally and establish safety before remote work
 
-- [ ] Integrate reviewed #31/#32 changes locally; record the exact candidate revision.
+- [x] Integrate reviewed #31/#32 changes locally; record the exact candidate revision.
   Review test coverage and scripts at that revision. Keep docs changes separate
   from backend/UX implementation; do not infer deployed state from local commits.
 - [ ] Confirm the owner-approved Dev target is still the recorded `bold-bee-347`,
@@ -96,7 +143,7 @@ sharing. Do not capture private financial views or browser network credentials.
 
 ### 2. Collect integrated automated evidence
 
-- [ ] After inspecting scripts for remote effects, run frozen install, typecheck,
+- [x] After inspecting scripts for remote effects, run frozen install, typecheck,
   frontend/backend lint, non-watch tests and the approved local production build
   on the candidate. Record exact commands, outcomes and warnings. Vercel's build
   command is a backend deployment and must not be substituted for the local build.
