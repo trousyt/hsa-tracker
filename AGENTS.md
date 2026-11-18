@@ -2,6 +2,20 @@
 
 This file provides guidance to Claude Code when working with this repository.
 
+## Agent skills
+
+### Issue tracker
+
+Track issues in GitHub Issues for `trousyt/hsa-tracker`. Before issue operations, read `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the five canonical triage labels. Before triaging or labeling issues, read `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Use single-context domain documentation. Before exploring domain concepts or architectural decisions, read `docs/agents/domain.md`.
+
 ## Build & Development Commands
 
 ```bash
@@ -25,13 +39,17 @@ bunx convex dev --once
 bunx shadcn@latest add <component-name>
 
 # Verify changes (run after every code change)
-bunx tsc --noEmit && bun run lint && bun run test 
+bunx tsc --noEmit && bun run lint && bun run test
 
 # Verify build (run right before commit)
 bun run build
 ```
 
 **Important:** After every code change, run lint, test, and build to confirm changes work correctly.
+
+## Worktrees
+
+- When creating a new worktree, copy .env.local from the repository main worktree
 
 ## Completion Checklist
 
@@ -47,6 +65,7 @@ Before considering a feature or fix complete, run browser automation checks (Cla
 This is an HSA (Health Savings Account) expense tracking application.
 
 **Tech Stack:**
+
 - Frontend: React 18 + TypeScript + Vite
 - UI Components: shadcn/ui + Tailwind CSS v4
 - Backend: Convex (real-time database + file storage)
@@ -54,6 +73,7 @@ This is an HSA (Health Savings Account) expense tracking application.
 - Tables: TanStack Table
 
 **Key Directories:**
+
 - `src/components/ui/` - shadcn/ui components (do not edit directly, use `bunx shadcn add`)
 - `src/components/expenses/` - Expense CRUD components
 - `src/components/documents/` - Document upload and viewing
@@ -64,6 +84,7 @@ This is an HSA (Health Savings Account) expense tracking application.
 - `convex/` - Backend functions and schema
 
 **Data Model:**
+
 - All monetary amounts stored as integer cents (not floating point)
 - Use `dollarsToCents()` / `centsToDollars()` from `src/lib/currency.ts`
 - Documents stored using Convex file storage with three-step pattern
@@ -93,6 +114,7 @@ See [`docs/testing-conventions.md`](docs/testing-conventions.md) for full testin
 ## Safety Rules
 
 **Never run destructive operations without explicit permission.** This includes:
+
 - `bunx convex run dev:clearAllData` or any data deletion mutations
 - Database migrations that drop or truncate tables
 - `git reset --hard`, `git clean -f`, or other commands that discard changes
@@ -106,27 +128,21 @@ When implementing destructive functionality: write the code, push/deploy it, the
 ## User Preferences
 
 - **Ask for information instead of using placeholders.** When you need specific information (URLs, credentials, names, etc.), ask the user directly rather than inserting placeholders or leaving manual steps.
-- **Always use git worktrees when executing work plans.** Create an isolated worktree before implementing changes to keep the main branch clean. Always use the `/git-worktree` skill when creating, switching, or removing worktrees.
-
-## Plans
-
-Plans are stored in `docs/plans/` using the format:
-```
-YYYY-MM-DD-{type}-{description}-plan.md
-```
-Where `{type}` is one of: `feat`, `fix`, `refactor`, `polish`, etc.
+- **Always use git worktrees when executing work plans.** Create an isolated worktree before implementing changes to keep the main branch clean. Worktrees should live in .worktrees/ relative at the root of the workspace directory.
 
 ## Key Patterns
 
 **Creating a new expense form:**
+
 ```typescript
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation } from "convex/react"
-import { api } from "convex/_generated/api"
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from 'convex/react';
+import { api } from 'convex/_generated/api';
 ```
 
 **File upload pattern:**
+
 1. `generateUploadUrl()` - Get signed URL from Convex
 2. `fetch(url, { method: "POST", body: file })` - Upload file
 3. `saveDocument({ storageId, ... })` - Save document record
@@ -134,25 +150,29 @@ import { api } from "convex/_generated/api"
 ## Currency Handling in Forms
 
 **Two-format rule:** Values exist in two formats:
+
 - **Database**: Integer cents (2550 = $25.50)
 - **Forms**: Decimal dollars (25.50)
 
 **Display functions:**
+
 - `formatCurrency(cents)` - For database values (converts internally)
 - `formatDollars(dollars)` - For form values or already-converted amounts
 
 **Conversion boundaries:**
+
 - Form → Database: `dollarsToCents(formValue)`
 - Database → Form: `centsToDollars(dbValue)`
 
 **Common mistake:**
+
 ```typescript
 // ❌ WRONG - formatCurrency expects cents, not dollars
-formatCurrency(centsToDollars(expense.amountCents))
+formatCurrency(centsToDollars(expense.amountCents));
 
 // ✓ CORRECT
-formatCurrency(expense.amountCents)  // OR
-formatDollars(centsToDollars(expense.amountCents))
+formatCurrency(expense.amountCents); // OR
+formatDollars(centsToDollars(expense.amountCents));
 ```
 
 ## Form Field Wiring Checklist
@@ -172,26 +192,30 @@ See: `docs/solutions/logic-errors/form-edit-dialog-field-synchronization.md`
 ## null vs undefined for Optional Fields
 
 **Frontend (Zod):**
+
 - `.nullish()` = accepts undefined, null, or value (use for clearable fields)
 
 **Backend (Convex):**
+
 - `v.optional(v.string())` = undefined or string (rejects null!)
 - `v.optional(v.union(v.string(), v.null()))` = undefined, null, or string
 
 **Pattern for clearable fields:**
+
 ```typescript
 // Frontend passes
-category: data.category ?? null  // undefined → null
+category: data.category ?? null; // undefined → null
 
 // Backend accepts
-category: v.optional(v.union(v.string(), v.null()))
+category: v.optional(v.union(v.string(), v.null()));
 ```
 
 **Pattern for non-clearable fields:**
+
 ```typescript
 // Frontend passes
-comment: data.comment || undefined  // empty/null → undefined
+comment: data.comment || undefined; // empty/null → undefined
 
 // Backend accepts
-comment: v.optional(v.string())
+comment: v.optional(v.string());
 ```
