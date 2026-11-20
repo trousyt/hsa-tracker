@@ -38,7 +38,7 @@ export function SummaryCard({
           className={cn(
             "text-2xl font-bold",
             variant === "success" && "text-green-600",
-            variant === "warning" && "text-yellow-600"
+            variant === "warning" && "text-yellow-700 dark:text-yellow-400"
           )}
         >
           {value}

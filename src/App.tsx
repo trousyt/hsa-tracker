@@ -76,7 +76,7 @@ function AuthenticatedApp({ onSignOut, signingOut, signOutError }: {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-6xl p-4 sm:p-8">
+      <main className="mx-auto max-w-6xl p-4 sm:p-8">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-baseline gap-3">
             <h1 className="text-3xl font-bold">
@@ -142,7 +142,7 @@ function AuthenticatedApp({ onSignOut, signingOut, signOutError }: {
             </ErrorBoundary>
           </TabsContent>
         </Tabs>
-      </div>
+      </main>
     </div>
   )
 }
