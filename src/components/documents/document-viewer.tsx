@@ -15,6 +15,7 @@ interface DocumentViewerProps {
   } | null
   onClose: () => void
   returnFocusRef: RefObject<HTMLButtonElement | null>
+  fallbackFocusRef: RefObject<HTMLDivElement | null>
 }
 
 /**
@@ -24,7 +25,7 @@ interface DocumentViewerProps {
  *
  * @returns The document viewer modal as JSX, or `null` when `document` is not provided.
  */
-export function DocumentViewer({ document, onClose, returnFocusRef }: DocumentViewerProps) {
+export function DocumentViewer({ document, onClose, returnFocusRef, fallbackFocusRef }: DocumentViewerProps) {
   const { getFileUrl, downloadFile } = useSecureFileUrl()
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -97,11 +98,12 @@ export function DocumentViewer({ document, onClose, returnFocusRef }: DocumentVi
       <DialogContent
         className="max-w-4xl max-h-[90vh] p-0 overflow-hidden"
         onCloseAutoFocus={(event) => {
-          // This programmatic dialog has no Radix DialogTrigger to restore focus to.
+          // Radix's modal handler cannot restore focus without a DialogTrigger.
           const trigger = returnFocusRef.current
-          if (trigger?.isConnected) {
+          const target = trigger?.isConnected ? trigger : fallbackFocusRef.current
+          if (target?.isConnected) {
             event.preventDefault()
-            trigger.focus()
+            target.focus()
           }
         }}
       >

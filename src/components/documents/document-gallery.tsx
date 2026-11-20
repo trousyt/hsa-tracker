@@ -51,6 +51,15 @@ export function DocumentGallery({
 
   // Keep the origin available after onClose clears the selected document.
   const viewerTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const galleryFocusRef = useRef<HTMLDivElement | null>(null)
+  // The same root survives loading/empty states if the clicked document disappears.
+  const galleryFocusProps = {
+    ref: galleryFocusRef,
+    role: "region",
+    "aria-label": "Expense documents",
+    tabIndex: -1,
+    className: "focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2",
+  }
 
   const [deletingDocumentId, setDeletingDocumentId] =
     useState<Id<"documents"> | null>(null)
@@ -59,24 +68,28 @@ export function DocumentGallery({
   // Loading state
   if (documents === undefined) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="border rounded-lg overflow-hidden">
-            <Skeleton className="aspect-[4/3]" />
-            <div className="p-2 border-t space-y-1">
-              <Skeleton className="h-3 w-24" />
-              <Skeleton className="h-3 w-12" />
+      <div {...galleryFocusProps}>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="border rounded-lg overflow-hidden">
+              <Skeleton className="aspect-[4/3]" />
+              <div className="p-2 border-t space-y-1">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 w-12" />
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     )
   }
 
   if (documents.length === 0) {
     return (
-      <div className="text-sm text-muted-foreground text-center py-4">
-        No documents attached
+      <div {...galleryFocusProps}>
+        <div className="text-sm text-muted-foreground text-center py-4">
+          No documents attached
+        </div>
       </div>
     )
   }
@@ -115,7 +128,7 @@ export function DocumentGallery({
   }
 
   return (
-    <>
+    <div {...galleryFocusProps}>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {documents.map((doc) => {
           if (!doc) return null
@@ -176,6 +189,7 @@ export function DocumentGallery({
         document={viewingDocument}
         onClose={() => setViewingDocument(null)}
         returnFocusRef={viewerTriggerRef}
+        fallbackFocusRef={galleryFocusRef}
       />
 
       {/* Delete Confirmation */}
@@ -203,6 +217,6 @@ export function DocumentGallery({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   )
 }

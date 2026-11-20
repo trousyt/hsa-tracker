@@ -42,32 +42,56 @@ describe("DocumentViewer close focus", () => {
     const focus = vi.fn()
     const trigger = { isConnected: true, focus } as unknown as HTMLButtonElement
     const returnFocusRef = { current: trigger as HTMLButtonElement | null }
+    const fallbackFocus = vi.fn()
+    const fallbackFocusRef = {
+      current: { isConnected: true, focus: fallbackFocus } as unknown as HTMLDivElement,
+    }
     const onClose = vi.fn()
-    renderToStaticMarkup(createElement(DocumentViewer, { document, onClose, returnFocusRef }))
+    renderToStaticMarkup(createElement(DocumentViewer, { document, onClose, returnFocusRef, fallbackFocusRef }))
 
     dialog.root?.onOpenChange?.(false)
     expect(onClose).toHaveBeenCalledOnce()
     expect(focus).not.toHaveBeenCalled()
 
     // The gallery clears the selected document before Radix runs close autofocus.
-    renderToStaticMarkup(createElement(DocumentViewer, { document: null, onClose, returnFocusRef }))
+    renderToStaticMarkup(createElement(DocumentViewer, { document: null, onClose, returnFocusRef, fallbackFocusRef }))
     const event = new Event("closeAutoFocus", { cancelable: true })
     expect(dialog.content?.onCloseAutoFocus).toBeTypeOf("function")
     dialog.content?.onCloseAutoFocus?.(event)
     expect(event.defaultPrevented).toBe(true)
     expect(focus).toHaveBeenCalledOnce()
+    expect(fallbackFocus).not.toHaveBeenCalled()
   })
 
-  it.each(["disconnected", "missing"])("does not focus a %s trigger", (state) => {
+  it.each(["disconnected", "missing"])("explicitly focuses the surviving gallery when the trigger is %s", (state) => {
     const focus = vi.fn()
     const returnFocusRef = {
       current: state === "missing" ? null : { isConnected: false, focus } as unknown as HTMLButtonElement,
     }
-    renderToStaticMarkup(createElement(DocumentViewer, { document, onClose: vi.fn(), returnFocusRef }))
+    const fallbackFocus = vi.fn()
+    const fallbackFocusRef = {
+      current: { isConnected: true, focus: fallbackFocus } as unknown as HTMLDivElement,
+    }
+    renderToStaticMarkup(createElement(DocumentViewer, { document, onClose: vi.fn(), returnFocusRef, fallbackFocusRef }))
     const event = new Event("closeAutoFocus", { cancelable: true })
     expect(dialog.content?.onCloseAutoFocus).toBeTypeOf("function")
     dialog.content?.onCloseAutoFocus?.(event)
     expect(focus).not.toHaveBeenCalled()
-    expect(event.defaultPrevented).toBe(false)
+    expect(fallbackFocus).toHaveBeenCalledOnce()
+    // Explicitly override Radix's null-trigger handler; do not rely on its fallback.
+    expect(event.defaultPrevented).toBe(true)
+  })
+
+  it("does not attempt to focus a gallery that has also been removed", () => {
+    const focus = vi.fn()
+    const fallbackFocusRef = {
+      current: { isConnected: false, focus } as unknown as HTMLDivElement,
+    }
+    renderToStaticMarkup(createElement(DocumentViewer, {
+      document, onClose: vi.fn(), returnFocusRef: { current: null }, fallbackFocusRef,
+    }))
+    dialog.content?.onCloseAutoFocus?.(new Event("closeAutoFocus", { cancelable: true }))
+    expect(focus).not.toHaveBeenCalled()
+    // Both destinations are gone; this does not assert any Radix/DOM focus outcome.
   })
 })
