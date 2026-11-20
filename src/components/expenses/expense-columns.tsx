@@ -175,6 +175,7 @@ export function getExpenseColumns({
     },
     {
       id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
       cell: ({ row }) => {
         const expense = row.original
 

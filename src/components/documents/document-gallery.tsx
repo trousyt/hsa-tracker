@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useQuery, useMutation } from "convex/react"
 import { api } from "@convex/_generated/api"
 import type { Id } from "@convex/_generated/dataModel"
@@ -48,6 +48,9 @@ export function DocumentGallery({
     filename: string
     mimeType: string
   } | null>(null)
+
+  // Keep the origin available after onClose clears the selected document.
+  const viewerTriggerRef = useRef<HTMLButtonElement | null>(null)
 
   const [deletingDocumentId, setDeletingDocumentId] =
     useState<Id<"documents"> | null>(null)
@@ -124,13 +127,14 @@ export function DocumentGallery({
             >
               {/* Thumbnail placeholder - click to view securely */}
               <button
-                onClick={() =>
+                onClick={(event) => {
+                  viewerTriggerRef.current = event.currentTarget
                   setViewingDocument({
                     id: doc._id,
                     filename: doc.originalFilename,
                     mimeType: doc.mimeType,
                   })
-                }
+                }}
                 aria-label={`View document: ${doc.originalFilename}`}
                 className="w-full aspect-[4/3] flex items-center justify-center hover:bg-muted/50 transition-colors"
               >
@@ -171,6 +175,7 @@ export function DocumentGallery({
       <DocumentViewer
         document={viewingDocument}
         onClose={() => setViewingDocument(null)}
+        returnFocusRef={viewerTriggerRef}
       />
 
       {/* Delete Confirmation */}
