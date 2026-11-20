@@ -8,13 +8,15 @@ following accepted [#30](https://github.com/trousyt/hsa-tracker/issues/30), with
 [#34](https://github.com/trousyt/hsa-tracker/issues/34) still requires explicit
 production approval. See [deployment gates and production planning](DEPLOYMENT.md).
 
-**Status:** reviewed lanes integrated locally; automated checks executed on
-`300a6b00173c5943322d15bddbf7fa9e71e731c6` (details below). The original documentation
-preparation was based on checkpoint `502df8a`; it did not execute application checks.
-No browser/live OAuth validation, backend CLI/codegen/deployment, live data writes
-or recovery was performed in this integration pass. Unchecked items below remain
-planned checks, not failures or passing evidence. This does not establish completion
-of #31, #32 or #33, or authorize Production.
+**Status:** owner-approved Dev deployment/live checks ran on `24d02b1` on
+2026-11-19. Five observed accessibility defects were fixed in independently reviewed
+frontend-only lanes, integrated and retested on
+`5c6b55eed954016d8dd596726f5643425115528f` on 2026-11-20. The new local suite passes
+291 tests; the scoped live accessibility retest results and fixture limits are below.
+The earlier documentation-only and 2026-11-17 local results remain historical evidence,
+not current live results. Compound unchecked items below retain their unverified
+parts. This does not establish overall completion of #31, #32 or #33, or authorize
+Production. Recovery/concurrency limitations remain unchanged.
 
 ## Evidence ledger
 
@@ -25,14 +27,14 @@ results against an exact revision and time before changing any remaining status.
 
 | Boundary | Existing evidence and limits | Remaining acceptance |
 | --- | --- | --- |
-| Dev target and owner | **Historical accepted:** direct migration to the recorded Dev deployment, real GitHub login, returning sign-in and reload; trusted numeric-ID comparison matched owner | Reconfirm target/callback/origins privately and repeat on integrated #31/#32 candidate |
+| Dev target and owner | **Historical accepted:** trusted numeric-ID comparison matched owner. **2026-11-19/20 live:** approved Dev/frontend alignment privately verified and real owner GitHub OAuth completed | Provider-console app binding and private pre/post owner/linkage reconciliation not independently repeated |
 | Data preservation | **Historical accepted:** unchanged legacy app owner identity; owned financial/document records, blobs and historical audit references retained | Compare private baseline to candidate after validation, explain expected controlled-test deltas; no duplicates, reassignment or unowned-record claims |
-| Secure-file live boundary | **Historical accepted:** owner success; absent/invalid/revoked credentials denied with no-store reported; audit increments reported only for valid access | Broader upload/preview/download, expired/other-user denial, CORS, content protections and audit behavior on current candidate |
-| Automated checks | **Current local automated:** frozen install; root/app/node/Convex typechecks; lint with one existing warning; 271 tests in 22 files; local build and diff checks passed at `300a6b0` (commands below) | These are local checks, not deployed/backend-codegen, bearer-verification or browser acceptance |
+| Secure-file live boundary | **2026-11-19 live at `24d02b1`:** existing image preview/download byte equality; owner response protections; absent/malformed/signed-out-session denial; HTTP CORS preflight. **2026-11-20:** same backend retained; existing image reads for focus retests | Upload/PDF coverage, natural expiry/other-user denial, independent audit reconciliation and broader browser-origin CORS proof remain unverified |
+| Automated checks | **2026-11-20 local at `5c6b55e`:** frozen install; root/app/node/Convex typechecks; lint with one existing warning; 291 tests in 27 files; local build and diff checks passed | Local checks do not establish bearer expiry/other-user denial or overall live acceptance |
 | Owner policy and sessions | **Source/fixture:** owner-resolution and callback tests, registered auth components and session-oriented HTTP tests exist | Confirm integrated test coverage and remaining real-provider/session gaps; bare identity injection is not bearer verification |
 | OAuth callback concurrency and rollback | **Not E2E proven:** upstream transactional source reasoning and start/invalid-ticket fixtures only; public mounted-component HTTP harness limitation | Use supported public flow for retry/concurrency and safe denial evidence if feasible; explicitly record any remaining gap, no private-table seeding |
 | Recovery | **Deferred to #33:** legacy state/config retained; backup including files reported, not reverified; no successful restore/recovery rehearsal | Keep unresolved, present owner-selected next step at planning gate. Owner does not want isolated restore; do not run one or reopen #30 |
-| UX and browser | **Historical limited:** basic live login/reload, not full a11y/responsive/application acceptance | Full headed-browser sequence, session/error distinctions and representative application/document flows on integrated candidate |
+| UX and browser | **2026-11-19 live:** OAuth/refresh/signout/returning login, current-session other-tab loss/recovery, brief network distinction. **2026-11-20 live:** scoped five-defect retest passes at three sizes/light and dark; zero axe violations, with incomplete contrast checks disclosed below | Natural expiry, other-owner/provider denial/cancellation, full screen-reader speech and preservation reconciliation remain unverified; synthetic callback/fallback cases are not provider/data-reactivity proof |
 | Production | **Not authorized:** no production result is claimed | Concrete fact-checked runbook, resolved controls/recovery decisions and explicit owner approval under #34 |
 
 Historical source:
@@ -52,7 +54,101 @@ integrated automated run below also executed these tests):
   [`fileAccess.test.ts`](../convex/fileAccess.test.ts): HTTP/session/ownership and
   audit fixtures; identity injection bypasses real bearer signature verification.
 
-## Current integrated local automated evidence
+## 2026-11-19 live baseline and 2026-11-20 accessibility retest
+
+Operator: serialized implementation/runtime worker, exclusive headed browser.
+Environment: Windows, Node v24.21.0, Bun 1.4.2, agent-browser 0.38.1 and installed
+Playwright connected over CDP to the same headed Chrome. No headless browser was used.
+
+### Prior live baseline (2026-11-19, `24d02b14904f869abbe5efb450b6fe85a2fc0f77`)
+
+Under explicit owner approval, the exact Dev-only command
+`node node_modules/convex/bin/main.js dev --once --env-file .env.local --typecheck enable --codegen disable --tail-logs disable`
+completed at 17:11:33 UTC with exit 0 and no data-loss/incompatibility warning.
+Target/key presence checks were private. Secure-file preflight changed from the
+older backend fingerprint to expected CORS/no-store/nosniff. No migration or recovery ran.
+
+Live owner OAuth, authenticated reload with actual refresh HTTP 200, deliberate
+signout, returning sign-in, duplicate-start suppression and current-session
+other-tab signout/recovery passed. Other-tab loss and signed-out-token denial are
+invalidation evidence, **not natural expiry**. A brief offline/online interruption
+did not falsely show session loss. Existing image preview/download bytes matched
+privately; owner HTTP 200 protections and absent/malformed/signed-out credential
+401 denials were checked. HTTP preflight rejected a disallowed requested origin;
+this was not an authenticated separate-browser-origin exploit test. Crafted
+invalid/generic callback UI checks were client-input fixtures, not provider failures.
+Five application accessibility findings prompted the reviewed follow-up below.
+
+### Integrated frontend-only revision and local checks (2026-11-20)
+
+Clean starting HEAD: `24d02b14904f869abbe5efb450b6fe85a2fc0f77`.
+Cherry-picked in approved order without conflicts:
+
+| Reviewed source commit | Integrated commit | Scope |
+| --- | --- | --- |
+| `e9455cd590f051614640f75f2f08955ac81a4cb7` | `6bf93bdec9dd21b310bb9aaa56e4c201ab9fb405` | Viewer origin focus, desktop filter names, Actions header and tests |
+| `6543c97d5d1a28d4fa1775e9ccbdcfa936867a21` | `c7a797026b812f8c41f5a526dcc17609017ef244` | Explicit surviving-gallery fallback and tests |
+| `61d0ef7e55d5bf6d51598dc2ce25d69851098fa3` | `5c6b55eed954016d8dd596726f5643425115528f` | Main landmark, real SVG chart names, scoped contrast and tests |
+
+Frozen install, all four explicit root/app/node/Convex typechecks, lint,
+`bun run test:run`, local `bun run build` and working/index/range diff checks passed
+before browser testing. Result: **291 tests in 27 files**. Lint retained the existing
+`expense-form.tsx:147` incompatible-library warning; Vitest retained the existing
+native-config-loader/`__dirname` warning. The local build transformed 3607 modules.
+Backend, dependency/lockfile and Vite configuration diffs against `24d02b1` were empty.
+No backend deployment or codegen was needed or performed on 2026-11-20.
+
+The previous Vite listener was gone. After separate approval, a new strict-port,
+localhost-only server started from this worktree. All eight changed application
+modules' served source-map `sourcesContent` exactly matched local files. The
+candidate version, Dev frontend target and unchanged deployed secure-file header
+fingerprint were verified before accepting browser evidence. Real GitHub OAuth
+required owner interaction and completed successfully on this candidate.
+
+### Live five-defect retest (2026-11-20, 17:33-17:38 UTC)
+
+| Defect/boundary | Executed result and evidence class |
+| --- | --- |
+| Viewer close focus | **Live existing-document/native keyboard:** Escape and keyboard-activated Close restore the exact clicked View document button at 375x667, 768x1024 and 1280x800; subsequent Tab stays in expense detail. Existing image decoded. Distinct multiple-trigger live coverage was not established. |
+| Disconnected origin | **Synthetic reversible DOM perturbation on live UI:** temporarily detached only the clicked button, closed viewer, confirmed explicit named gallery-region focus and Tab continuity, then restored the same DOM node. No document or record was removed. |
+| Loading/empty gallery | **Synthetic client-only component fixture:** bundled the actual gallery/viewer/Radix components with mocked query/file inputs and no backend calls. Loaded-to-loading and loaded-to-empty transitions retained the identical connected gallery root and restored focus there when viewer unmounted. This is not live database reactivity proof. |
+| Desktop filter names | **Live accessibility tree/native keyboard:** visible combobox names are Filter by status and Filter by category; keyboard opens each listbox and Escape restores focus. |
+| Main landmark | **Live DOM/axe:** exactly one main on Dashboard, Expenses and Optimizer at every tested size/theme. |
+| Chart ARIA/contrast | **Live DOM/native keyboard/axe:** names are on actual focusable `svg[role=application]`; arrow-key focus and both range controls' Enter behavior work at each size/theme; desktop maximize/close also passes. Inactive range minimum contrast is 18.16:1 light / 14.50:1 dark; warning value is 4.93:1 light / 11.39:1 dark, computed from actual CSS colors without reading financial text. |
+| Actions header | **Live accessibility tree/axe:** columnheader accessible name is Actions. |
+
+All three tabs at all three sizes in light and dark produced **zero axe violations**
+(18 audits). Most audits retain one incomplete color-contrast item, so this is not
+an assertion of completely automated accessibility clearance. Explicit computed-color
+review covers the patched range/warning text; full screen-reader speech and all
+remaining incomplete targets are not proven. Light/dark was a reversible frontend
+root-class toggle, restored afterward; no backend or shared preference changed.
+
+No horizontal page overflow or error boundary appeared. Screenshots were limited
+to nonfinancial header/chart-control crops and clearly synthetic fixture views;
+these were inspected for spacing, visibility, colors and focus. No financial view
+or real document content was captured. Initial agent-browser click/Enter commands
+were no-ops and are not passing input evidence; actual keyboard checks used installed
+Playwright over the same headed CDP connection. A dynamic-selector range assertion
+initially reselected another button; stable same-element retests passed both ranges.
+
+Session-specific TEMP evidence, retained outside Git:
+`auth-v2-acceptance-20261118-2357/accessibility-live-retest-20261120.json`,
+`accessibility-keyboard-retest-20261120.json`,
+`accessibility-fixture-chart-retest-20261120.json`, and
+`accessibility-contrast-review-20261120.json`. Earlier dated evidence remains
+unchanged. Private downloaded document evidence must not be published.
+
+**Remaining:** natural expiry/other-owner/provider cancellation and failure; private
+owner/linkage/data/blob/audit reconciliation; PDF/upload and financial-write smoke
+coverage; full screen-reader speech and incomplete axe targets. Normal auth state
+and permitted document-access audits occurred, but no financial mutations, uploads,
+paid OCR, deletion, OAuth configuration changes, recovery, production action or
+remote Git operation occurred. Existing recovery/concurrency limitations stand.
+This ledger update is documentation-only after the tested application revision;
+it does not establish overall #33 completion or #34 readiness.
+
+## Historical 2026-11-17 integrated local automated evidence
 
 Recorded 2026-11-17 at 17:43 UTC by the implementation agent, on Windows with
 Bun 1.4.2 and Node v24.21.0. Evidence class: **local automated/source review** only.
