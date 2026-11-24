@@ -1,3 +1,4 @@
+import { getEnvironmentVariable } from "./lib/environment"
 import { internalAction, mutation, internalMutation, internalQuery, query } from "./_generated/server"
 import { v } from "convex/values"
 import { internal } from "./_generated/api"
@@ -144,8 +145,8 @@ export const extractExpenseData = internalAction({
       const base64Content: string = btoa(binaryString)
 
       // 3. Call Cloud Run OCR proxy
-      const cloudRunUrl = process.env.CLOUD_RUN_OCR_URL
-      const apiSecret = process.env.CLOUD_RUN_API_SECRET
+      const cloudRunUrl = getEnvironmentVariable("CLOUD_RUN_OCR_URL")
+      const apiSecret = getEnvironmentVariable("CLOUD_RUN_API_SECRET")
 
       if (!cloudRunUrl || !apiSecret) {
         throw new Error("Missing Cloud Run configuration")

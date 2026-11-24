@@ -1,5 +1,13 @@
 import { v } from "convex/values"
 import { internalMutation, internalQuery } from "./_generated/server"
+import { getAuthUserId } from "@convex-dev/auth/server"
+
+/** Resolve the HTTP caller through the live v2 session. */
+export const getCurrentUserId = internalQuery({
+  args: {},
+  returns: v.union(v.id("users"), v.null()),
+  handler: async (ctx) => await getAuthUserId(ctx),
+})
 
 /**
  * Internal query to validate a document ID string.

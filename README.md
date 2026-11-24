@@ -30,7 +30,8 @@ A web application for tracking qualified HSA (Health Savings Account) medical ex
 
 ### Prerequisites
 
-- [Bun](https://bun.sh/) (recommended) or Node.js 18+
+- Node.js 22 or newer
+- [Bun](https://bun.sh/) (recommended)
 
 ### Installation
 

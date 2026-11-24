@@ -1,31 +1,30 @@
-import { convexTest } from "convex-test"
 import { expect, test, describe } from "vitest"
 import { api } from "./_generated/api"
-import schema from "./schema"
-import { modules } from "./test.setup"
-
-// Helper to create an authenticated test context
-// The convex-test library automatically generates subject/issuer/tokenIdentifier
-// when using withIdentity, which works with getAuthUserId
-async function createAuthenticatedContext() {
-  const t = convexTest(schema, modules)
-
-  // Create a user in the database first
-  const userId = await t.run(async (ctx) => {
-    return await ctx.db.insert("users", {
-      name: "Test User",
-      email: "test@example.com",
-      isOwner: true,
-    })
-  })
-
-  // Create authenticated context with subject matching the user ID
-  const authed = t.withIdentity({ subject: userId as unknown as string })
-
-  return { t, authed, userId }
-}
+import { createSessionContext as createAuthenticatedContext } from "../src/test/session.fixture"
 
 describe("expenses", () => {
+  test("isolates public expense queries and mutations by identity", async () => {
+    const { t, authed } = await createAuthenticatedContext()
+    const expenseId = await authed.mutation(api.expenses.create, {
+      datePaid: "2026-01-15",
+      provider: "Private provider",
+      amountCents: 15000,
+    })
+    const other = t.withIdentity({ subject: "another-user" })
+
+    expect(await t.query(api.expenses.list, {})).toEqual([])
+    expect(await t.query(api.expenses.get, { id: expenseId })).toBeNull()
+    expect(await other.query(api.expenses.get, { id: expenseId })).toBeNull()
+    expect(await authed.query(api.expenses.get, { id: expenseId })).toMatchObject({
+      provider: "Private provider",
+    })
+    await expect(t.mutation(api.expenses.create, {
+      datePaid: "2026-01-15",
+      provider: "Anonymous",
+      amountCents: 100,
+    })).rejects.toThrow()
+  })
+
   describe("CRUD operations", () => {
     test("create expense with required fields", async () => {
       const { authed, userId } = await createAuthenticatedContext()

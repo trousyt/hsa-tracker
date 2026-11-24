@@ -115,7 +115,7 @@ export function CompoundingSavingsChart({ data, expanded, onToggleExpand, range,
                   className={`px-2 py-1 text-xs rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                     range === r.key
                       ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      : "bg-muted text-foreground hover:bg-muted/80"
                   }`}
                   aria-pressed={range === r.key}
                 >
@@ -142,7 +142,7 @@ export function CompoundingSavingsChart({ data, expanded, onToggleExpand, range,
               className={`px-2 py-1 text-xs rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                 range === r.key
                   ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  : "bg-muted text-foreground hover:bg-muted/80"
               }`}
               aria-pressed={range === r.key}
             >
@@ -172,9 +172,12 @@ export function CompoundingSavingsChart({ data, expanded, onToggleExpand, range,
           <ChartContainer
             config={chartConfig}
             className={`${chartHeight} w-full`}
-            aria-label={`Compounding savings ${range === "ytd" ? "year to date" : range} area chart`}
           >
-            <AreaChart accessibilityLayer data={chartData}>
+            <AreaChart
+              accessibilityLayer
+              aria-label={`Compounding savings ${range === "ytd" ? "year to date" : range} area chart`}
+              data={chartData}
+            >
               <defs>
                 <linearGradient id="gainsFill" x1="0" y1="0" x2="0" y2="1">
                   <stop

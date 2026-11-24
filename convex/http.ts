@@ -1,22 +1,26 @@
+import { getEnvironmentVariable } from "./lib/environment"
 import { httpRouter } from "convex/server"
 import { httpAction } from "./_generated/server"
-import { auth } from "./auth"
 import { internal } from "./_generated/api"
 
 const http = httpRouter()
 
 /**
- * Build CORS headers using the SITE_URL environment variable.
- * Falls back to empty string (blocks cross-origin) if not configured.
- * Convex env vars are set via `npx convex env set SITE_URL <url>`.
+ * Restrict file CORS to a single configured frontend origin and prevent caching
+ * of both file contents and authorization failures. Invalid configuration fails closed.
  */
-function getCorsHeaders() {
-  const raw = process.env.SITE_URL ?? ""
+function getFileResponseHeaders() {
+  const raw = getEnvironmentVariable("SITE_URL") ?? ""
   let origin = ""
   if (raw && raw !== "*") {
     try {
       const parsed = new URL(raw)
-      origin = parsed.origin
+      const secure = parsed.protocol === "https:" ||
+        (parsed.protocol === "http:" && ["localhost", "127.0.0.1"].includes(parsed.hostname))
+      if (secure && !parsed.username && !parsed.password &&
+          parsed.pathname === "/" && !parsed.search && !parsed.hash) {
+        origin = parsed.origin
+      }
     } catch {
       // Invalid URL — block cross-origin by leaving origin empty
     }
@@ -25,11 +29,10 @@ function getCorsHeaders() {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    "Cache-Control": "private, no-store, max-age=0",
+    "X-Content-Type-Options": "nosniff",
   } as const
 }
-
-// Add Convex Auth routes
-auth.addHttpRoutes(http)
 
 // Secure file serving endpoint
 // Authenticates every request and logs access for audit compliance
@@ -53,30 +56,25 @@ http.route({
     if (!documentId) {
       return new Response("Invalid document ID", {
         status: 400,
-        headers: { ...getCorsHeaders(), "Content-Type": "text/plain" },
+        headers: { ...getFileResponseHeaders(), "Content-Type": "text/plain" },
       })
     }
 
-    // Check authentication via JWT in Authorization header
-    const identity = await ctx.auth.getUserIdentity()
+    // The v2 token identifies a session; resolve its user through the auth component.
+    const userId = await ctx.runQuery(internal.fileAccess.getCurrentUserId, {})
 
-    if (!identity) {
+    if (!userId) {
       // Do not write attacker-controlled anonymous requests to the database.
       // The edge/provider should provide rate limiting for these failures.
       return new Response("Unauthorized", {
         status: 401,
         headers: {
-          ...getCorsHeaders(),
+          ...getFileResponseHeaders(),
           "Content-Type": "text/plain",
           "WWW-Authenticate": "Bearer",
         },
       })
     }
-
-    // Extract user ID from identity subject
-    // Convex Auth format: "userId|sessionId" - we need just the userId part
-    // This matches what getAuthUserId() does internally
-    const userId = identity.subject.split("|")[0]
 
     // Fetch document and verify ownership
     const document = await ctx.runQuery(internal.fileAccess.getDocumentForAccess, {
@@ -97,7 +95,7 @@ http.route({
 
       return new Response("Forbidden", {
         status: 403,
-        headers: { ...getCorsHeaders(), "Content-Type": "text/plain" },
+        headers: { ...getFileResponseHeaders(), "Content-Type": "text/plain" },
       })
     }
 
@@ -116,7 +114,7 @@ http.route({
 
       return new Response("File not found", {
         status: 404,
-        headers: { ...getCorsHeaders(), "Content-Type": "text/plain" },
+        headers: { ...getFileResponseHeaders(), "Content-Type": "text/plain" },
       })
     }
 
@@ -133,12 +131,10 @@ http.route({
     return new Response(blob, {
       status: 200,
       headers: {
-        ...getCorsHeaders(),
+        ...getFileResponseHeaders(),
         "Content-Type": document.mimeType,
         "Content-Disposition": `inline; filename="${encodeURIComponent(document.originalFilename)}"`,
         "Content-Length": document.sizeBytes.toString(),
-        "X-Content-Type-Options": "nosniff",
-        "Cache-Control": "private, no-store, max-age=0",
         // Prevent clickjacking
         "X-Frame-Options": "SAMEORIGIN",
       },
@@ -154,7 +150,7 @@ http.route({
     return new Response(null, {
       status: 204,
       headers: {
-        ...getCorsHeaders(),
+        ...getFileResponseHeaders(),
         "Access-Control-Max-Age": "86400",
       },
     })

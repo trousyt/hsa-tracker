@@ -134,7 +134,7 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand, range, on
                   className={`px-2 py-1 text-xs rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                     range === r.key
                       ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      : "bg-muted text-foreground hover:bg-muted/80"
                   }`}
                   aria-pressed={range === r.key}
                 >
@@ -161,7 +161,7 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand, range, on
               className={`px-2 py-1 text-xs rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                 range === r.key
                   ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  : "bg-muted text-foreground hover:bg-muted/80"
               }`}
               aria-pressed={range === r.key}
             >
@@ -182,9 +182,12 @@ export function MonthlySpendingChart({ data, expanded, onToggleExpand, range, on
         <ChartContainer
           config={chartConfig}
           className={`${chartHeight} w-full`}
-          aria-label="Out-of-pocket medical spending bar chart"
         >
-          <BarChart accessibilityLayer data={chartData}>
+          <BarChart
+            accessibilityLayer
+            aria-label="Out-of-pocket medical spending bar chart"
+            data={chartData}
+          >
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis
               dataKey="label"

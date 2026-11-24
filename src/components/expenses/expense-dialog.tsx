@@ -16,6 +16,7 @@ import { Progress } from "@/components/ui/progress"
 import { ExpenseForm } from "./expense-form"
 import { dollarsToCents, centsToDollars } from "@/lib/currency"
 import { useSecureFile } from "@/lib/secure-file"
+import { isValidCategory } from "@/lib/constants/expense-categories"
 import type { ExpenseFormData } from "@/lib/validations/expense"
 import { cn, getUserErrorMessage } from "@/lib/utils"
 import { parseLocalDate, formatLocalDate } from "@/lib/dates"
@@ -347,7 +348,7 @@ export function ExpenseDialog({
           ? centsToDollars(effectiveOcrData.amount.valueCents)
           : centsToDollars(expense.amountCents),
         comment: expense.comment,
-        category: expense.category,
+        category: isValidCategory(expense.category) ? expense.category : null,
       }
     : effectiveOcrData
       ? {

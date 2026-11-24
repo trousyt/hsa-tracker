@@ -288,7 +288,7 @@ export function ExpenseTable() {
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as StatusFilter)}
           >
-            <SelectTrigger className="hidden lg:flex w-[150px]">
+            <SelectTrigger aria-label="Filter by status" className="hidden lg:flex w-[150px]">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -302,7 +302,7 @@ export function ExpenseTable() {
             value={categoryFilter}
             onValueChange={(value) => setCategoryFilter(value as CategoryFilter)}
           >
-            <SelectTrigger className="hidden lg:flex w-[180px]">
+            <SelectTrigger aria-label="Filter by category" className="hidden lg:flex w-[180px]">
               <SelectValue placeholder="Filter by category" />
             </SelectTrigger>
             <SelectContent>

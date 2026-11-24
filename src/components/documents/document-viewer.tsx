@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, type RefObject } from "react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { FileText, Download, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,8 @@ interface DocumentViewerProps {
     mimeType: string
   } | null
   onClose: () => void
+  returnFocusRef: RefObject<HTMLButtonElement | null>
+  fallbackFocusRef: RefObject<HTMLDivElement | null>
 }
 
 /**
@@ -23,7 +25,7 @@ interface DocumentViewerProps {
  *
  * @returns The document viewer modal as JSX, or `null` when `document` is not provided.
  */
-export function DocumentViewer({ document, onClose }: DocumentViewerProps) {
+export function DocumentViewer({ document, onClose, returnFocusRef, fallbackFocusRef }: DocumentViewerProps) {
   const { getFileUrl, downloadFile } = useSecureFileUrl()
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -93,7 +95,18 @@ export function DocumentViewer({ document, onClose }: DocumentViewerProps) {
 
   return (
     <Dialog open={!!document} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
+      <DialogContent
+        className="max-w-4xl max-h-[90vh] p-0 overflow-hidden"
+        onCloseAutoFocus={(event) => {
+          // Radix's modal handler cannot restore focus without a DialogTrigger.
+          const trigger = returnFocusRef.current
+          const target = trigger?.isConnected ? trigger : fallbackFocusRef.current
+          if (target?.isConnected) {
+            event.preventDefault()
+            target.focus()
+          }
+        }}
+      >
         <DialogTitle className="sr-only">{document.filename}</DialogTitle>
 
         {/* Header — pr-10 avoids overlap with the dialog close button */}

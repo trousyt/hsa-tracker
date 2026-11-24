@@ -1,8 +1,10 @@
 import GitHub from "@auth/core/providers/github"
-import { convexAuth } from "@convex-dev/auth/server"
-import { Id } from "./_generated/dataModel"
+import { convexAuth } from "@convex-dev/auth-legacy/server"
+import type { Id } from "./_generated/dataModel"
 
-export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
+/** Retain the v1 configuration for recovery without exposing its sign-in functions. */
+export function legacyAuthForRecovery() {
+  return convexAuth({
   providers: [
     GitHub({
       profile(githubProfile) {
@@ -84,4 +86,5 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       return userId
     },
   },
-})
+  })
+}

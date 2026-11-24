@@ -9,14 +9,18 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as authV2 from "../authV2.js";
 import type * as charts from "../charts.js";
 import type * as dev from "../dev.js";
 import type * as documents from "../documents.js";
 import type * as expenses from "../expenses.js";
 import type * as fileAccess from "../fileAccess.js";
+import type * as githubOwner from "../githubOwner.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_authRedirectOrigins from "../lib/authRedirectOrigins.js";
 import type * as lib_constants from "../lib/constants.js";
+import type * as lib_ownerMigration from "../lib/ownerMigration.js";
 import type * as lib_validation from "../lib/validation.js";
 import type * as ocr from "../ocr.js";
 import type * as optimizer from "../optimizer.js";
@@ -30,14 +34,18 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  authV2: typeof authV2;
   charts: typeof charts;
   dev: typeof dev;
   documents: typeof documents;
   expenses: typeof expenses;
   fileAccess: typeof fileAccess;
+  githubOwner: typeof githubOwner;
   http: typeof http;
   "lib/auth": typeof lib_auth;
+  "lib/authRedirectOrigins": typeof lib_authRedirectOrigins;
   "lib/constants": typeof lib_constants;
+  "lib/ownerMigration": typeof lib_ownerMigration;
   "lib/validation": typeof lib_validation;
   ocr: typeof ocr;
   optimizer: typeof optimizer;
@@ -70,4 +78,7 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  auth: import("@convex-dev/auth/_generated/component.js").ComponentApi<"auth">;
+  authGithub: import("@convex-dev/auth/components/github/_generated/component.js").ComponentApi<"authGithub">;
+};

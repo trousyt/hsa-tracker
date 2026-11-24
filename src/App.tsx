@@ -1,5 +1,5 @@
-import { useState, useEffect, lazy, Suspense } from "react"
-import { Authenticated, Unauthenticated, AuthLoading } from "convex/react"
+import { useState, useEffect, useRef, lazy, Suspense } from "react"
+import { useConvexAuth } from "convex/react"
 import { useAuthActions } from "@convex-dev/auth/react"
 import { Toaster } from "@/components/ui/sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ErrorBoundary } from "@/components/shared/error-boundary"
 import { SignIn } from "@/components/auth/sign-in"
+import { initialSessionFeedback, sessionFeedback } from "@/components/auth/auth-feedback"
 import { AuthLoading as AuthLoadingScreen } from "@/components/auth/auth-loading"
 import { LayoutDashboard, Receipt, Calculator, LogOut } from "lucide-react"
 
@@ -47,8 +48,11 @@ function getTabFromUrl(): TabValue {
   return DEFAULT_TAB
 }
 
-function AuthenticatedApp() {
-  const { signOut } = useAuthActions()
+function AuthenticatedApp({ onSignOut, signingOut, signOutError }: {
+  onSignOut: () => void
+  signingOut: boolean
+  signOutError: string | null
+}) {
   const [activeTab, setActiveTab] = useState<TabValue>(getTabFromUrl)
 
   const handleTabChange = (value: string) => {
@@ -72,7 +76,7 @@ function AuthenticatedApp() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-6xl p-4 sm:p-8">
+      <main className="mx-auto max-w-6xl p-4 sm:p-8">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-baseline gap-3">
             <h1 className="text-3xl font-bold">
@@ -83,13 +87,20 @@ function AuthenticatedApp() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => void signOut()}
+            onClick={onSignOut}
+            disabled={signingOut}
+            aria-busy={signingOut}
             className="gap-2"
           >
-            <LogOut className="h-4 w-4" />
-            Sign out
+            <LogOut className="h-4 w-4" aria-hidden="true" />
+            {signingOut ? "Signing out…" : "Sign out"}
           </Button>
         </div>
+
+        <p role="alert" className={signOutError ? "mb-4 rounded-md border p-3 text-sm" : "sr-only"}>
+          {signOutError}
+        </p>
+        <p role="status" className="sr-only">{signingOut ? "Signing out. Please wait." : ""}</p>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList>
@@ -131,23 +142,48 @@ function AuthenticatedApp() {
             </ErrorBoundary>
           </TabsContent>
         </Tabs>
-      </div>
+      </main>
     </div>
   )
 }
 
 function App() {
+  const auth = useConvexAuth()
+  const { signOut } = useAuthActions()
+  const [session, setSession] = useState(initialSessionFeedback)
+  const [signingOut, setSigningOut] = useState(false)
+  const [signOutError, setSignOutError] = useState<string | null>(null)
+  const signOutStarted = useRef(false)
+  const observed = sessionFeedback(session, { type: "auth", ...auth })
+  // Adjust before rendering children so recovery never flashes a normal sign-in screen.
+  if (observed !== session) setSession(observed)
+
+  async function handleSignOut() {
+    if (signOutStarted.current) return
+    signOutStarted.current = true
+    setSigningOut(true)
+    setSignOutError(null)
+    setSession((current) => sessionFeedback(current, { type: "sign-out-started" }))
+    try {
+      await signOut()
+    } catch {
+      setSession((current) => sessionFeedback(current, { type: "sign-out-failed" }))
+      setSignOutError("Could not finish signing out. Check your connection and try Sign out again.")
+    } finally {
+      signOutStarted.current = false
+      setSigningOut(false)
+    }
+  }
+
   return (
     <>
-      <AuthLoading>
-        <AuthLoadingScreen />
-      </AuthLoading>
-      <Unauthenticated>
-        <SignIn />
-      </Unauthenticated>
-      <Authenticated>
-        <AuthenticatedApp />
-      </Authenticated>
+      {auth.isLoading ? <AuthLoadingScreen /> : auth.isAuthenticated ? (
+        <AuthenticatedApp
+          onSignOut={() => void handleSignOut()}
+          signingOut={signingOut}
+          signOutError={signOutError}
+        />
+      ) : <SignIn notice={observed.notice} />}
       <Toaster />
     </>
   )
